@@ -1,0 +1,327 @@
+﻿# Atmospheric CO2 66 Million Year Reconstruction from Marine Archives 
+#----------------------------------------------------------------------- 
+#                World Data Service for Paleoclimatology, Boulder 
+#                                  and 
+#                     NOAA Paleoclimatology Program 
+#             National Centers for Environmental Information (NCEI)
+#----------------------------------------------------------------------- 
+# Template Version 4.0
+# Encoding: UTF-8
+# NOTE: Please cite original publication, NOAA Landing Page URL, dataset and publication DOIs (where available), and date accessed when using downloaded data. If there is no publication information, please cite investigator, study title, NOAA Landing Page URL, and date accessed. 
+#
+# Description/Documentation lines begin with #
+# Data lines have no #
+#
+# NOAA_Landing_Page:  https://www.ncdc.noaa.gov/paleo/study/33616 
+#   Landing_Page_Description: 
+#
+# Study_Level_JSON_Metadata: https://www.ncei.noaa.gov/pub/data/metadata/published/paleo/json/noaa-forcing-33616.json 
+#   Study_Level_JSON_Description: JSON metadata of this data file's parent study, which includes all study metadata.
+#
+# Data_Type: Climate Forcing
+#
+# Dataset_DOI: 
+#
+# Science_Keywords: Atmospheric Gas Reconstruction
+#--------------------     
+# Resource_Links
+#   
+# Data_Download_Resource: https://www.ncei.noaa.gov/pub/data/paleo/climate_forcing/trace_gases/rae2021/rae2021alkenone-co2diffusive.txt
+#   Data_Download_Description: 
+#
+# Supplemental_Download_Resource: 
+#   Supplemental_Description: 
+#
+# Related_Online_Resource: 
+#   Related_Online_Description: 
+#
+# Original_Source_URL: 
+#   Original_Source_Description: 
+#--------------------
+# Contribution_Date
+#    Date: 2021-06-09
+#--------------------
+# File_Last_Modified_Date
+#     Date: 2021-06-09
+#--------------------
+# Title
+#   Study_Name: Atmospheric CO2 66 Million Year Reconstruction from Marine Archives
+#--------------------
+# Investigators
+#   Investigators: Rae, J.W.B.; Zhang, Y.G.; Liu, X.; Foster, G.L.; Stoll, H.M; Whiteford, R.D.M.
+#--------------------
+# Description_Notes_and_Keywords
+#   Description: Atmospheric carbon dioxide concentration reconstructed from marine sediment alkenone and boron isotope data for the past 66 million years.
+# 
+# This compilation of alkenone d13C data and related CO2 estimates was made as part of Rae et al., 2021, Annual Reviews of Earth and Planetary Sciences
+# Two approaches - Quaternary anchoring and the Diffusive framework - are described in the paper and CO2 estimates are provided for each approach in the files rae2021alkenone-co2anchored.txt and rae2021alkenone-co2diffusive.txt. 
+# These approaches are limited to sites with good overlap of data with the ice core CO2 record (for Quaternary anchoring) or sites with measured cell size data (for the modified diffusive framework). 
+# As our aim is to estimate atmospheric CO2, we also avoid sites where temperature estimates come only from planktic d18O with variable preservation/d18Osw (e.g. ODP 730, 588, 612) or which are potentially influenced by oceanographic fronts or upwelling zones (e.g. ODP 982, 882, 850, 803, 1090, 513, 608, 1172)
+# The columns colour, symbol, and size are used in plotting routines that reproduce figure 4 in Rae et al. (2021).
+# 
+# The Quaternary anchoring approach uses the equation Ep = m(ln[CO2]) + I, with m (the sensitivity of Ep to CO2) taken from culture data (as presented in Stoll et al., 2019) and I (the non-CO2 sources of variation in Ep) determined through comparison to aqueous [CO2] determined from ice core CO2 data.  
+# The value of m is 2.66 (0.42 SD), assessed for Ep sensitivity to [CO2] from 5-30 umol/kg (Stoll et al. 2019).  I is shown for each site below. 
+# Calculations use a Monte Carlo approach, with 1SD of other parameters as follows: temperature = 2C; salinity = 1psu; d13Calk as reported or 0.2; d13Cforam 0.1. 
+#  
+# Site description		
+# site	I	reference
+# 925	7.88	Zhang et al. (2013) & Gonzalez et al. (submitted)
+# 999	6.35	Badger et al. (2019)
+# 806	8.12	Pagani et al. (2010)
+# 
+# The diffusive approach is based around the equation Ep = Ef-b/[CO2] and follows the approach of Zhang et al. (2020) which uses measurements of coccolith length to help determine the physiological parameter (b). 
+# Determinations of Ep and resulting CO2 are shown for d13C of aqueous CO2 taken both from planktic carbonate (mainly foraminifera) and also from benthic foraminifera.  The use of benthics helps overcome uncertainties surrounding planktic d13C vital effects in extinct species.  To obtain values representative of the ocean surface, we used the upper 84th percentile of the benthic d13C stack (Cramer et al., 2009 - see column d13C_benthic_84pc) plus 1 permil (see column d13C_benthic_84pc_plus1); values using this approach are labelled with _benthic.  The planktic and benthic estimates show close agreement in the younger part of the record, while in the older part of the record where the planktic d13C vital effects are less well constrained, the use of the benthic values produces more coherent CO2 estimates. 
+# 
+# Site Description 
+# Sites	Age (Ma) (GTS2012)	SST	Uncertainties of alkenone d13C 	Uncertainties of Lcoccolith	Sources of εp and SST data 	Sources of Lcoccolith	d13C of carbonates
+# Site 806	9.42-0.10	BAYSPAR standard	0.2permil	the mean value (0.95 µm) of the measured standard errors 	Zhang et al. (2017)	Zhang et al. (2017) (linear interpolation)	d13C of T. sacculifer (data between 4.94-0 Ma is obtained from Pagani et al. (2010) )
+# Site 925	13.78-0.03 	BAYSPLINE	measured	the mean value (1.06 µm) of the measured standard errors	Zhang et al. (2013)	Bolton et al. (2016) (linear interpolation)	d13C of G. ruber for the mid- and late Miocene; d13C of T. sacculifer prior to 5 Ma (Pagani et al., 2010)
+# Site 516	32.32-24.40	BAYSPAR analogue (prior mean 30°C )	0.2permil	measured	Pagani et al. (2005); Pagani et al. (2011)	Pagani et al. (2011)	d13C compositions of the < 60 μm fine fraction (FF) from Pagani et al, (2005) assuming an isotopic offset between the FF and shallow-dwelling foraminifera of +0.5permil, foraminifera is not well preserved 
+# Site 612	45.13-35.02	BAYSPAR analogue (prior mean 25°C )	0.2permil	measured	Pagani et al. (2005); Pagani et al. (2011)	Pagani et al. (2011)	d13C of planktonic and benthic foraminfera
+# Sites 277, 511, 925 and 929	E-O transition	UK'37-SST for Sites 511 and 277; BAYSPAR for Sites 929 and 925	0.2permil	measured	Pagani et al. (2011)	Pagani et al. (2011)	d13C of planktonic and benthic foraminfera; adjusted to estiamte surface d13C of DIC
+# 
+#--------------------
+# Publication 
+#   Authors: James W.B. Rae, Yi Ge Zhang, Xiaoqing Liu, Gavin L. Foster, Heather M. Stoll, and Ross D.M. Whiteford
+#   Published_Date_or_Year: 2021-05-01
+#   Published_Title: Atmospheric CO2 over the Past 66 Million Years from Marine Archives
+#   Journal_Name: Annual Review of Earth and Planetary Sciences 
+#   Volume: 49
+#   Edition: 
+#   Issue: 
+#   Pages: 609-641
+#   Report_Number: 
+#   DOI: 10.1146/annurev-earth-082420-063026
+#   Publication_Place: 
+#   Publisher:
+#   ISBN: 
+#   Online_Resource: https://www.annualreviews.org/doi/abs/10.1146/annurev-earth-082420-063026
+#   Other_Reference_Details: 
+#   Full_Citation:
+#   Abstract: Throughout Earth's history, CO2 is thought to have exerted a fundamental control on environmental change. Here we review and revise CO2 reconstructions from boron isotopes in carbonates and carbon isotopes in organic matter over the Cenozoic-the past 66 million years. We find close coupling between CO2 and climate throughout the Cenozoic, with peak CO2 levels of ~1,500 ppm in the Eocene greenhouse, decreasing to ~500 ppm in the Miocene, and falling further into the ice age world of the Plio-Pleistocene. Around two-thirds of Cenozoic CO2 drawdown is explained by an increase in the ratio of ocean alkalinity to dissolved inorganic carbon, likely linked to a change in the balance of weathering to outgassing, with the remaining one-third due to changing ocean temperature and major ion composition. Earth system climate sensitivity is explored and may vary between different time intervals. The Cenozoic CO2 record highlights the truly geological scale of anthropogenic CO2 change: Current CO2 levels were last seen around 3 million years ago, and major cuts in emissions are required to prevent a return to the CO2 levels of the Miocene or Eocene in the coming century.
+#--------------------
+# Funding_Agency 
+#   Funding_Agency_Name: 
+#   Grant:
+#--------------------
+# Site_Information 
+#   Site_Name: Global
+#   Location: Geographic Region>Global
+#   Northernmost_Latitude: 90
+#   Southernmost_Latitude: -90
+#   Easternmost_Longitude: 180
+#   Westernmost_Longitude: -180
+#   Elevation_m: 
+#--------------------
+# Data_Collection  
+#   Collection_Name: Rae2021CO2
+#   Earliest_Year: 66000000
+#   Most_Recent_Year: 0
+#   Time_Unit: Cal. Year BP
+#   Core_Length_m: 
+#   Parameter_Keywords: carbon dioxide
+#   Notes:
+#--------------------
+# Chronology_Information
+#   Chronology: 
+#
+#--------------------
+# Variables  
+#
+# PaST_Thesaurus_Download_Resource:  https://www.ncei.noaa.gov/pub/data/paleo/PaST-thesaurus/SKOS/past-thesaurus-v1.0.rdf
+#   PaST_Thesaurus_Download_Description: Paleoenvironmental Standard Terms (PaST) Thesaurus terms, definitions, and relationships in SKOS format.
+#
+# Variables format: Short_name <tab> what,material,error,units,seasonality,data_type,detail,method,data_format,additional_information
+#
+## site	sample identification, , , , , paleoceanography, , ,C, site	
+## age	age, , , calendar kiloyear before present, , paleoceanography; climate reconstructions; climate forcing, , ,N,
+## temp	temperature, sea water, , degree Celsius, , paleoceanography; climate reconstructions, , ,N,
+## temp1SD	temperature, sea water, one standard deviation, degree Celsius, , paleoceanography; climate reconstructions, , ,N,
+## d13C_alk	delta 13C, alkenone, , per mil, , paleoceanography, , ,N, 
+## d13C_alk1SD	delta 13C, alkenone, one standard deviation, per mil, , paleoceanography, , ,N, 
+## d13C_planktic	delta 13C, planktic foraminifer, , per mil, , paleoceanography, , ,N, 
+## d13C_planktic1SD	delta 13C, planktic foraminifer, one standard deviation, per mil, , paleoceanography, , ,N, 
+## coccolith_length	length, coccolithophore, , micrometer, , paleoceanography, , ,N,
+## coccolith_length_1SD	length, coccolithophore, one standard deviation, micrometer, , paleoceanography, , ,N,
+## salinity	salinity, sea water, , dimensionless, , paleoceanography; climate reconstructions, , ,N,
+## salinity_1SD	salinity, sea water, one standard deviation, dimensionless, , paleoceanography; climate reconstructions, , ,N,
+## b_16pc	physiological scaling parameter, , percentile, dimensionless, , paleoceanography, , ,N, b parameter; 16th percentile
+## b_50pc	physiological scaling parameter, , , dimensionless, , paleoceanography, , ,N, b parameter;50th percentile
+## b_84pc	physiological scaling parameter, , percentile, dimensionless, , paleoceanography, , ,N, b parameter;84th percentile
+## ep_16pc	delta 13C photosynthetic fractionation factor, , percentile, per mil, , paleoceanography, , ,N, 16th percentile
+## ep_50pc	delta 13C photosynthetic fractionation factor, , , per mil, , paleoceanography, , ,N, 50th percentile
+## ep_84pc	delta 13C photosynthetic fractionation factor, , percentile, per mil, , paleoceanography, , ,N, 84th percentile
+## co2	carbon dioxide, bulk atmosphere; alkenone, , parts per million, , paleoceanography; climate forcing, , ,N, 
+## co2_16pc	carbon dioxide, bulk atmosphere; alkenone, percentile, parts per million, , paleoceanography; climate forcing, , ,N, 16th percentile
+## co2_84pc	carbon dioxide, bulk atmosphere; alkenone, percentile, parts per million, , paleoceanography; climate forcing, , ,N, 84th percentile
+## d13C_benthic_84pc	delta 13C, benthic foraminifer, , per mil, , paleoceanography, , ,N, 84th percentile
+## d13C_benthic_84pcplus1	delta 13C, benthic foraminifer, , per mil, , paleoceanography, , ,N, 84th percentile plus 1 per mil
+## ep_16pc_benthic	delta 13C photosynthetic fractionation factor, benthic foraminifer, percentile, per mil, , paleoceanography, , ,N, 16th percentile
+## ep_50pc_benthic	delta 13C photosynthetic fractionation factor, benthic foraminifer, , per mil, , paleoceanography, , ,N, 50th percentile
+## ep_84pc_benthic	delta 13C photosynthetic fractionation factor, benthic foraminifer, percentile, per mil, , paleoceanography, , ,N, 84th percentile
+## co2_benthic	carbon dioxide, bulk atmosphere; benthic foraminifer, , parts per million, , paleoceanography; climate forcing, , ,N, 
+## co2_16pc_benthic	carbon dioxide, bulk atmosphere; benthic foraminifer, percentile, parts per million, , paleoceanography; climate forcing, , ,N, 16th percentile 
+## co2_84pc_benthic	carbon dioxide, bulk atmosphere; benthic foraminifer, percentile, parts per million, , paleoceanography; climate forcing, , ,N, 84th percentile
+## symbol	notes, , , , , paleoceanography, , ,C, plot symbol Figure 4
+## colour	notes, , , , , paleoceanography, , ,C, plot colour Figure 4
+## size	notes, , , , , paleoceanography, , ,C, plot size Figure 4
+#
+#--------------------
+# Data:
+# Data lines follow (have no #)
+# Data line format - tab-delimited text, variable short name as header
+# Missing_Values: 
+# 
+site	age	temp	temp1SD	d13C_alk	d13C_alk1SD	d13C_planktic	d13C_planktic_1SD	coccolith_length	coccolith_length_1SD	salinity	salinity_1SD	b_16pc	b_50pc	b_84pc	ep_16pc	ep_50pc	ep_84pc	co2	co2_16pc	co2_84pc	d13C_benthic_84pc	d13C_benthic_84pc_plus1	ep_16pc_benthic	ep_50pc_benthic	ep_84pc_benthic	co2_benthic	co2_16pc_benthic	co2_84pc_benthic	symbol	colour	size
+806	95.6	27.1	2.4	-24.38	0.2	1.50	0.1	3.20	0.95	34.5	0.5	60.9	70.2	84.4	12.0	12.3	12.7	206	175	249	0.920	1.920	12.41	12.75	13.09	212	181	259	s	LightBlue	6
+806	215.3	28.7	2.3	-24.57	0.2	1.26	0.1	3.09	0.95	34.5	0.5	60.8	70.5	85.7	12.1	12.5	12.8	218	185	268	0.750	1.750	12.64	12.98	13.31	226	192	278	s	LightBlue	6
+806	448.8	26.5	2.1	-24.92	0.2	1.95	0.1	2.87	0.95	34.5	0.5	60.4	71.5	89.2	12.9	13.3	13.6	224	187	280	1.030	2.030	13.02	13.34	13.66	225	188	283	s	LightBlue	6
+806	645.1	28.5	2.2	-25.01	0.2	1.17	0.1	2.73	0.95	34.5	0.5	60.3	72.1	90.9	12.5	12.8	13.1	227	187	290	0.703	1.703	13.03	13.36	13.68	239	197	304	s	LightBlue	6
+806	720.2	26.8	2.2	-24.53	0.2	1.81	0.1	2.67	0.95	34.5	0.5	60.3	72.6	92.7	12.4	12.8	13.1	219	179	281	0.715	1.715	12.34	12.66	12.99	217	177	278	s	LightBlue	6
+806	776.9	26.2	2.3	-24.56	0.2	1.40	0.1	2.63	0.95	34.5	0.5	60.6	72.9	93.1	12.0	12.3	12.6	208	170	268	0.723	1.723	12.28	12.61	12.95	213	174	276	s	LightBlue	6
+806	823.9	28.7	2.1	-25.51	0.2	1.56	0.1	2.59	0.95	34.5	0.5	60.2	72.7	93.1	13.4	13.8	14.1	250	203	324	0.683	1.683	13.57	13.88	14.20	253	206	329	s	LightBlue	6
+806	855.2	26.9	2.3	-24.71	0.2	1.42	0.1	2.52	0.95	34.5	0.5	60.3	73.3	95.3	12.2	12.6	12.9	218	177	285	0.596	1.596	12.41	12.74	13.07	221	179	288	s	LightBlue	6
+806	926.7	26.3	2.4	-25.46	0.2	1.36	0.1	2.36	0.95	34.5	0.5	59.6	73.9	97.0	12.9	13.2	13.6	230	183	307	0.724	1.724	13.23	13.57	13.92	236	186	315	s	LightBlue	6
+806	998.2	26.9	2.3	-25.14	0.2	2.07	0.1	2.19	0.95	34.5	0.5	59.6	75.2	101.6	13.3	13.7	14.0	246	192	334	0.830	1.830	13.08	13.40	13.73	240	187	326	s	LightBlue	6
+806	1051.8	27.1	2.5	-25.02	0.2	1.40	0.1	2.07	0.95	34.5	0.5	59.4	76.1	104.4	12.5	12.9	13.2	234	179	327	0.820	1.820	12.97	13.32	13.66	240	185	330	s	LightBlue	6
+806	1123.4	25.8	2.3	-24.76	0.2	1.56	0.1	2.14	0.95	34.5	0.5	59.6	76.0	103.6	12.3	12.6	12.9	222	172	305	0.854	1.854	12.57	12.91	13.23	227	175	313	s	LightBlue	6
+806	1179.2	26.4	2.7	-25.26	0.2	1.88	0.1	2.19	0.95	34.5	0.5	59.6	75.4	101.9	13.2	13.5	13.9	241	187	326	0.923	1.923	13.20	13.58	13.95	241	188	330	s	LightBlue	6
+806	1190.4	27.9	2.5	-25.00	0.2	1.60	0.1	2.20	0.95	34.5	0.5	59.5	75.4	101.9	12.8	13.2	13.5	242	188	327	0.944	1.944	13.16	13.52	13.88	248	193	336	s	LightBlue	6
+806	1219.5	29.3	2.8	-25.30	0.2	1.76	0.1	2.23	0.95	34.5	0.5	59.3	74.5	100.3	13.4	13.8	14.2	261	204	355	0.935	1.935	13.61	13.98	14.36	267	207	360	s	LightBlue	6
+806	1234.2	28.9	2.3	-24.90	0.2	1.91	0.1	2.25	0.95	34.5	0.5	59.8	74.9	99.6	13.2	13.5	13.9	252	198	345	0.920	1.920	13.18	13.52	13.86	253	199	342	s	LightBlue	6
+806	1250.7	28.8	2.3	-25.20	0.2	1.50	0.1	2.26	0.95	34.5	0.5	59.9	74.8	99.9	13.0	13.4	13.7	249	196	336	0.890	1.890	13.44	13.77	14.11	258	202	352	s	LightBlue	6
+806	1268.6	26.1	2.4	-25.39	0.2	1.70	0.1	2.28	0.95	34.5	0.5	59.5	74.8	100.1	13.1	13.5	13.8	235	186	316	0.889	1.889	13.31	13.64	13.98	239	187	323	s	LightBlue	6
+806	1317.8	29.4	2.5	-24.89	0.2	1.58	0.1	2.33	0.95	34.5	0.5	59.5	74.1	97.4	12.9	13.2	13.6	247	197	330	0.881	1.881	13.18	13.53	13.87	255	201	343	s	LightBlue	6
+806	1655.3	26.6	2.8	-24.98	0.2	1.85	0.1	2.48	0.95	34.5	0.5	60.2	73.8	95.6	12.9	13.2	13.6	229	182	302	1.024	2.024	13.04	13.41	13.78	232	186	307	s	LightBlue	6
+806	1749.3	29.2	2.5	-24.88	0.2	1.45	0.1	2.36	0.95	34.5	0.5	59.7	74.1	97.4	12.7	13.0	13.4	243	193	323	0.950	1.950	13.20	13.55	13.90	252	200	337	s	LightBlue	6
+806	1800.4	27.4	2.3	-25.19	0.2	1.45	0.1	2.34	0.95	34.5	0.5	59.8	74.7	99.2	12.8	13.1	13.5	234	186	313	0.992	1.992	13.36	13.70	14.03	246	194	331	s	LightBlue	6
+806	1854.1	28.3	2.3	-24.96	0.2	1.96	0.1	2.31	0.95	34.5	0.5	59.6	74.6	98.6	13.2	13.5	13.9	248	196	333	1.020	2.020	13.27	13.61	13.93	249	198	334	s	LightBlue	6
+806	1907.9	29.5	2.6	-25.12	0.2	1.70	0.1	2.36	0.95	34.5	0.5	59.5	73.9	97.4	13.2	13.6	13.9	255	202	338	0.922	1.922	13.45	13.81	14.17	261	206	348	s	LightBlue	6
+806	1992.7	28.9	2.4	-25.32	0.2	1.66	0.1	2.40	0.95	34.5	0.5	59.9	73.7	97.1	13.3	13.7	14.0	253	201	336	0.809	1.809	13.48	13.83	14.17	256	203	343	s	LightBlue	6
+806	2226.9	28.5	2.5	-25.50	0.2	1.58	0.1	2.45	0.95	34.5	0.5	59.8	73.5	96.5	13.4	13.7	14.1	251	200	331	0.826	1.826	13.63	13.98	14.33	255	205	337	s	LightBlue	6
+806	2279.8	27.5	2.5	-25.04	0.2	1.67	0.1	2.38	0.95	34.5	0.5	60.1	74.1	97.7	12.9	13.2	13.6	236	188	313	0.940	1.940	13.15	13.51	13.86	243	192	322	s	LightBlue	6
+806	2357.6	30.1	2.6	-25.38	0.2	1.70	0.1	2.30	0.95	34.5	0.5	59.7	74.4	99.2	13.6	13.9	14.3	269	212	360	0.814	1.814	13.69	14.06	14.42	271	212	365	s	LightBlue	6
+806	2405.0	30.0	2.4	-26.37	0.2	1.88	0.1	2.25	0.95	34.5	0.5	59.4	75.1	100.4	14.8	15.1	15.5	301	236	410	0.750	1.750	14.66	15.00	15.34	298	233	406	s	LightBlue	6
+806	2458.0	27.0	2.6	-26.23	0.2	1.73	0.1	2.27	0.95	34.5	0.5	59.7	74.8	100.6	14.1	14.5	14.8	263	205	356	0.723	1.723	14.10	14.47	14.83	264	207	358	s	LightBlue	6
+806	2501.6	29.4	2.4	-26.32	0.2	1.59	0.1	2.29	0.95	34.5	0.5	59.4	74.3	99.1	14.4	14.7	15.1	286	224	382	0.813	1.813	14.61	14.95	15.29	292	229	392	s	LightBlue	6
+806	2532.2	30.2	2.6	-26.00	0.2	1.68	0.1	2.30	0.95	34.5	0.5	59.6	74.3	98.5	14.2	14.6	14.9	287	225	383	0.836	1.836	14.39	14.74	15.11	291	227	392	s	LightBlue	6
+806	2523.6	28.7	2.3	-25.72	0.2	1.36	0.1	2.30	0.95	34.5	0.5	59.8	74.3	99.6	13.4	13.8	14.1	255	202	343	0.828	1.828	13.91	14.24	14.58	268	212	363	s	LightBlue	6
+806	2608.5	27.6	2.4	-25.34	0.2	1.80	0.1	2.33	0.95	34.5	0.5	59.6	74.5	98.6	13.4	13.7	14.0	247	195	330	0.725	1.725	13.27	13.61	13.95	246	194	326	s	LightBlue	6
+806	2705.0	28.5	2.4	-25.51	0.2	1.50	0.1	2.37	0.95	34.5	0.5	59.9	74.5	98.1	13.3	13.7	14.0	252	199	337	0.859	1.859	13.69	14.03	14.37	260	207	347	s	LightBlue	6
+806	2805.0	31.4	2.5	-25.52	0.2	2.07	0.1	2.40	0.95	34.5	0.5	59.9	73.6	96.5	14.3	14.6	15.0	292	232	385	0.630	1.630	13.82	14.17	14.52	280	223	373	s	LightBlue	6
+806	2898.4	29.1	2.5	-25.67	0.2	2.05	0.1	2.44	0.95	34.5	0.5	59.8	73.6	96.6	14.1	14.5	14.8	273	217	360	0.934	1.934	14.00	14.35	14.69	270	215	356	s	LightBlue	6
+806	2997.9	29.6	2.3	-25.98	0.2	1.96	0.1	2.48	0.95	34.5	0.5	59.9	73.1	94.9	14.4	14.8	15.1	281	226	370	0.881	1.881	14.35	14.69	15.01	281	226	370	s	LightBlue	6
+806	3071.3	32.3	2.5	-24.71	0.2	1.91	0.1	2.52	0.95	34.5	0.5	60.0	72.8	94.6	13.4	13.7	14.1	272	219	351	0.788	1.788	13.26	13.60	13.94	269	217	350	s	LightBlue	6
+806	3171.4	29.3	2.6	-24.13	0.2	2.00	0.1	2.64	0.95	34.5	0.5	60.4	72.4	92.4	12.5	12.9	13.2	234	190	302	0.790	1.790	12.27	12.63	13.00	230	187	300	s	LightBlue	6
+806	3245.4	30.0	2.5	-24.49	0.2	1.97	0.1	2.73	0.95	34.5	0.5	60.4	72.1	91.1	12.9	13.3	13.6	245	201	313	0.819	1.819	12.77	13.11	13.46	241	198	307	s	LightBlue	6
+806	3454.8	31.6	2.4	-25.54	0.2	1.68	0.1	2.98	0.95	34.5	0.5	60.4	70.9	87.5	13.9	14.3	14.6	273	229	339	0.922	1.922	14.17	14.52	14.86	280	234	347	s	LightBlue	6
+806	3540.8	27.9	2.8	-24.90	0.2	1.67	0.1	3.09	0.95	34.5	0.5	60.9	70.5	86.0	12.7	13.1	13.5	226	190	279	1.071	2.071	13.16	13.54	13.91	234	195	289	s	LightBlue	6
+806	3746.6	31.1	2.2	-25.80	0.2	1.50	0.1	3.03	0.95	34.5	0.5	60.7	70.3	86.2	14.0	14.3	14.6	268	227	331	0.980	1.980	14.45	14.78	15.10	282	237	350	s	LightBlue	6
+806	3947.8	31.7	2.5	-25.62	0.2	2.01	0.1	3.16	0.95	34.5	0.5	60.8	69.8	84.2	14.4	14.7	15.1	281	239	345	0.981	1.981	14.33	14.67	15.01	281	237	343	s	LightBlue	6
+806	4105.4	28.9	2.3	-24.96	0.2	2.23	0.1	3.38	0.95	34.5	0.5	61.0	69.5	82.3	13.6	13.9	14.2	242	208	290	0.948	1.948	13.26	13.59	13.92	235	203	282	s	LightBlue	6
+806	4255.4	30.0	2.4	-24.88	0.2	1.58	0.1	3.20	0.95	34.5	0.5	60.8	70.1	84.0	12.9	13.3	13.6	237	202	288	0.796	1.796	13.15	13.49	13.83	242	205	295	s	LightBlue	6
+806	4437.0	30.8	2.5	-25.42	0.2	1.97	0.1	3.15	0.95	34.5	0.5	60.5	69.9	84.5	14.0	14.4	14.7	267	225	328	1.062	2.062	14.09	14.44	14.78	270	228	330	s	LightBlue	6
+806	4592.6	29.9	2.2	-25.26	0.2	2.04	0.1	3.17	0.95	34.5	0.5	60.7	69.9	84.4	13.8	14.1	14.5	256	218	314	1.047	2.047	13.80	14.13	14.46	256	218	311	s	LightBlue	6
+806	4752.9	33.7	2.5	-26.24	0.2	1.26	0.1	3.76	0.95	34.5	0.5	60.5	67.5	77.5	14.5	14.8	15.2	287	251	337	0.775	1.775	15.01	15.35	15.70	304	265	356	s	LightBlue	6
+806	5293.7	28.6	2.6	-25.81	0.2	1.94	0.1	4.16	0.95	34.5	0.5	60.5	66.7	74.8	14.1	14.4	14.8	244	215	281	1.168	2.168	14.32	14.67	15.03	250	220	288	s	LightBlue	6
+806	5511.5	31.3	2.3	-22.72	0.2	2.25	0.1	3.86	0.95	34.5	0.5	60.8	67.5	77.1	11.6	11.9	12.2	211	186	244	1.261	2.261	11.56	11.89	12.22	211	186	245	s	LightBlue	6
+806	5576.8	31.8	2.8	-24.22	0.2	2.86	0.1	3.82	0.95	34.5	0.5	60.6	67.4	77.0	13.7	14.1	14.5	257	223	302	1.156	2.156	13.04	13.41	13.78	242	211	282	s	LightBlue	6
+806	5693.5	31.1	2.5	-23.35	0.2	2.47	0.1	3.76	0.95	34.5	0.5	60.8	67.8	77.8	12.4	12.7	13.1	226	198	264	1.154	2.154	12.06	12.40	12.75	220	192	257	s	LightBlue	6
+806	5870.3	31.4	2.4	-24.17	0.2	2.70	0.1	3.69	0.95	34.5	0.5	60.8	68.1	78.9	13.5	13.8	14.2	251	219	294	1.015	2.015	12.81	13.15	13.49	236	205	278	s	LightBlue	6
+806	6059.8	31.3	2.6	-23.47	0.2	2.50	0.1	3.25	0.95	34.5	0.5	60.8	69.9	83.9	12.6	12.9	13.3	235	201	287	1.034	2.034	12.08	12.43	12.79	226	194	275	s	LightBlue	6
+806	6224.0	32.6	2.5	-25.18	0.2	2.35	0.1	3.52	0.95	34.5	0.5	60.7	68.5	80.0	14.4	14.7	15.0	280	242	334	1.007	2.007	13.98	14.34	14.70	271	235	324	s	LightBlue	6
+806	6413.5	32.0	2.5	-24.80	0.2	2.54	0.1	3.29	0.95	34.5	0.5	60.6	69.4	82.9	14.1	14.4	14.8	273	234	332	1.079	2.079	13.61	13.95	14.30	261	223	315	s	LightBlue	6
+806	6577.7	32.1	2.5	-22.12	0.2	1.96	0.1	4.85	0.95	34.5	0.5	59.4	65.0	71.2	10.7	11.1	11.4	194	173	217	1.084	2.084	10.84	11.19	11.53	196	175	219	s	LightBlue	6
+806	6754.5	31.7	2.3	-25.36	0.2	2.09	0.1	4.70	0.95	34.5	0.5	59.7	65.4	72.1	14.2	14.5	14.8	258	228	290	0.970	1.970	14.06	14.39	14.72	254	227	286	s	LightBlue	6
+806	6926.4	31.3	2.4	-25.24	0.2	2.00	0.1	4.31	0.95	34.5	0.5	60.3	66.3	73.7	13.9	14.3	14.6	253	224	289	1.002	2.002	13.91	14.26	14.60	253	225	289	s	LightBlue	6
+806	7061.9	31.9	2.7	-24.12	0.2	2.29	0.1	4.15	0.95	34.5	0.5	60.5	66.6	74.5	13.1	13.5	13.8	240	211	276	1.170	2.170	12.96	13.32	13.69	237	208	272	s	LightBlue	6
+806	7207.2	33.9	2.6	-23.32	0.2	1.97	0.1	4.09	0.95	34.5	0.5	60.4	66.6	74.8	12.2	12.5	12.9	232	205	267	1.196	2.196	12.41	12.77	13.14	237	208	271	s	LightBlue	6
+806	7333.1	34.4	2.5	-23.43	0.2	2.03	0.1	4.34	0.95	34.5	0.5	59.8	65.9	73.3	12.4	12.8	13.1	236	210	269	1.313	2.313	12.72	13.06	13.42	242	215	275	s	LightBlue	6
+806	7429.9	33.5	2.2	-23.24	0.2	1.81	0.1	3.97	0.95	34.5	0.5	60.5	67.1	75.7	11.9	12.3	12.6	226	200	260	1.028	2.028	12.15	12.47	12.79	230	204	264	s	LightBlue	6
+806	7478.4	32.6	2.6	-23.66	0.2	2.03	0.1	3.86	0.95	34.5	0.5	60.5	67.2	76.7	12.4	12.8	13.2	233	205	271	0.993	1.993	12.41	12.76	13.12	233	204	271	s	LightBlue	6
+806	7604.3	34.2	2.7	-24.28	0.2	2.29	0.1	3.83	0.95	34.5	0.5	60.5	67.2	77.0	13.5	13.9	14.3	266	232	309	1.102	2.102	13.35	13.71	14.07	260	228	303	s	LightBlue	6
+806	7739.8	33.5	2.2	-23.40	0.2	2.89	0.1	3.67	0.95	34.5	0.5	60.4	67.8	78.0	13.2	13.5	13.8	254	222	298	1.037	2.037	12.33	12.65	12.96	236	208	277	s	LightBlue	6
+806	7885.1	32.1	2.3	-24.63	0.2	3.03	0.1	3.52	0.95	34.5	0.5	60.6	68.5	80.0	14.4	14.7	15.1	280	242	332	1.002	2.002	13.37	13.70	14.04	253	220	301	s	LightBlue	6
+806	8282.2	31.5	2.2	-24.43	0.2	2.65	0.1	3.30	0.95	34.5	0.5	60.5	69.2	82.8	13.8	14.1	14.4	261	224	315	1.369	2.369	13.47	13.80	14.12	254	218	307	s	LightBlue	6
+806	9236.6	31.9	2.6	-25.27	0.2	2.10	0.1	6.33	0.95	34.5	0.5	54.9	62.1	69.2	14.1	14.5	14.8	243	211	278	1.488	2.488	14.49	14.85	15.21	253	219	289	s	LightBlue	6
+806	9419.0	31.8	2.5	-24.76	0.2	2.46	0.1	6.49	0.95	34.5	0.5	54.3	61.8	69.0	13.9	14.3	14.6	237	205	272	1.310	2.310	13.77	14.12	14.47	234	203	269	s	LightBlue	6
+925	310.0	28.1	2.0	-23.77	0.2	2.14	0.1	3.22	1.06	35.8	0.5	60.7	69.8	84.5	12.2	12.4	12.7	212	182	259	0.666	1.666	11.67	11.97	12.28	204	175	248	s	Orange	6
+925	431.0	27.8	2.4	-22.92	0.2	1.75	0.1	3.20	1.06	35.8	0.5	60.9	70.1	85.4	10.7	11.1	11.6	191	163	235	0.986	1.986	11.06	11.40	11.75	195	166	238	s	Orange	6
+925	575.3	28.6	2.1	-23.00	0.2	2.06	0.1	3.19	1.06	35.8	0.5	60.7	69.7	85.2	11.4	11.6	11.9	202	173	246	0.840	1.840	11.11	11.41	11.73	198	170	242	s	Orange	6
+925	928.7	27.7	2.4	-23.52	0.2	1.44	0.1	3.15	1.06	35.8	0.5	60.9	69.9	85.6	10.9	11.5	11.9	195	165	241	0.724	1.724	11.38	11.73	12.07	199	169	246	s	Orange	6
+925	1046.0	27.9	2.0	-23.73	0.2	1.49	0.1	3.09	1.06	35.8	0.5	60.5	70.1	86.4	11.4	11.7	12.1	201	171	250	0.820	1.820	11.77	12.08	12.39	206	175	255	s	Orange	6
+925	1191.0	28.3	2.0	-23.93	0.2	2.05	0.1	3.02	1.06	35.8	0.5	60.7	70.6	87.2	12.3	12.6	12.9	217	184	271	0.944	1.944	12.14	12.45	12.76	215	181	267	s	Orange	6
+925	1206.0	28.5	2.0	-23.45	0.2	2.01	0.1	3.01	1.06	35.8	0.5	60.7	70.5	87.2	11.8	12.1	12.3	210	177	261	0.949	1.949	11.68	11.99	12.30	209	177	261	s	Orange	6
+925	1218.8	28.5	2.1	-23.64	0.2	2.08	0.1	3.00	1.06	35.8	0.5	60.5	70.5	86.9	12.0	12.3	12.6	214	181	265	0.935	1.935	11.86	12.17	12.48	212	179	264	s	Orange	6
+925	1232.2	28.8	2.0	-23.72	0.2	2.12	0.1	3.00	1.06	35.8	0.5	60.6	70.8	87.4	12.2	12.5	12.7	219	185	272	0.920	1.920	11.96	12.27	12.58	215	181	267	s	Orange	6
+925	1250.0	27.8	2.4	-23.07	0.2	1.89	0.1	2.99	1.06	35.8	0.5	60.6	70.8	88.1	11.1	11.4	11.8	198	166	249	0.890	1.890	11.10	11.45	11.79	198	166	249	s	Orange	6
+925	1272.0	28.3	2.0	-22.99	0.2	2.44	0.1	2.98	1.06	35.8	0.5	60.7	70.7	88.0	11.5	12.0	12.5	209	176	261	0.889	1.889	11.13	11.44	11.74	200	169	250	s	Orange	6
+925	1284.6	28.1	2.0	-23.31	0.2	1.76	0.1	2.97	1.06	35.8	0.5	60.6	70.7	88.0	11.2	11.6	12.0	201	170	250	0.888	1.888	11.43	11.72	12.03	203	171	254	s	Orange	6
+925	1351.2	28.5	2.1	-23.48	0.2	2.60	0.1	2.93	1.06	35.8	0.5	60.6	70.6	89.0	12.3	12.7	13.0	220	186	278	0.872	1.872	11.62	11.93	12.24	208	175	262	s	Orange	6
+925	1651.8	27.1	2.3	-23.85	0.2	1.63	0.1	2.77	1.06	35.8	0.5	60.5	71.5	91.2	11.6	11.9	12.2	203	168	261	1.040	2.040	11.97	12.31	12.64	211	174	268	s	Orange	6
+925	1734.7	28.6	2.1	-23.75	0.2	1.74	0.1	2.73	1.06	35.8	0.5	60.6	72.1	92.2	11.8	12.1	12.4	215	178	277	0.954	1.954	12.00	12.30	12.62	218	180	280	s	Orange	6
+925	1959.1	28.7	2.0	-23.70	0.2	1.62	0.1	2.68	1.06	35.8	0.5	59.9	71.9	92.4	11.7	11.9	12.2	212	175	274	0.804	1.804	11.80	12.12	12.43	216	179	280	s	Orange	6
+925	2094.8	28.7	2.1	-24.12	0.2	1.97	0.1	2.74	1.06	35.8	0.5	60.1	71.8	91.3	12.4	12.7	13.0	227	187	288	0.743	1.743	12.18	12.49	12.81	221	184	282	s	Orange	6
+925	2198.2	29.3	2.1	-23.74	0.2	2.25	0.1	2.80	1.06	35.8	0.5	60.5	71.6	91.2	12.4	12.7	13.0	228	189	292	0.700	1.700	11.81	12.11	12.44	217	181	276	s	Orange	6
+925	2298.1	28.6	2.1	-24.36	0.2	2.04	0.1	2.84	1.06	35.8	0.5	60.3	71.5	90.3	12.8	13.0	13.3	231	192	293	0.960	1.960	12.65	12.97	13.28	230	192	291	s	Orange	6
+925	2421.4	28.9	2.1	-24.40	0.2	2.16	0.1	2.91	1.06	35.8	0.5	60.7	71.1	88.7	13.0	13.2	13.5	234	197	295	0.730	1.730	12.48	12.79	13.10	226	189	284	s	Orange	6
+925	2601.7	28.7	2.1	-24.41	0.2	1.82	0.1	2.99	1.06	35.8	0.5	60.4	70.3	87.3	12.6	12.9	13.2	225	190	281	0.720	1.720	12.48	12.78	13.09	223	190	278	s	Orange	6
+925	2619.7	28.3	2.0	-23.57	0.2	1.71	0.1	3.00	1.06	35.8	0.5	60.5	70.4	87.6	11.4	11.8	12.2	205	173	257	0.729	1.729	11.56	11.87	12.18	206	174	256	s	Orange	6
+925	2718.6	28.7	2.1	-24.08	0.2	1.53	0.1	3.05	1.06	35.8	0.5	60.8	70.3	86.6	11.9	12.2	12.6	213	181	263	0.837	1.837	12.24	12.55	12.86	218	185	272	s	Orange	6
+925	2938.1	28.8	2.1	-23.67	0.2	1.52	0.1	3.16	1.06	35.8	0.5	60.8	69.9	85.2	11.5	11.8	12.1	206	176	252	0.899	1.899	11.90	12.21	12.52	212	180	259	s	Orange	6
+925	3083.5	28.8	2.1	-24.25	0.2	2.12	0.1	3.13	1.06	35.8	0.5	60.6	70.1	85.5	12.7	13.0	13.3	226	193	279	0.765	1.765	12.35	12.67	12.98	220	187	271	s	Orange	6
+925	3126.0	28.9	2.1	-23.86	0.2	1.75	0.1	3.11	1.06	35.8	0.5	60.7	70.4	85.9	12.0	12.3	12.5	214	182	264	0.750	1.750	11.95	12.26	12.57	214	183	263	s	Orange	6
+925	3257.0	29.0	2.1	-24.33	0.2	1.93	0.1	3.05	1.06	35.8	0.5	60.7	70.4	86.6	12.7	12.9	13.2	227	192	281	0.817	1.817	12.51	12.82	13.14	225	190	278	s	Orange	6
+925	3300.0	28.3	2.0	-24.29	0.2	1.64	0.1	3.03	1.06	35.8	0.5	60.7	70.4	86.6	12.2	12.5	12.8	216	182	267	0.805	1.805	12.38	12.68	12.99	219	186	272	s	Orange	6
+925	3715.3	29.0	2.1	-24.21	0.2	2.17	0.1	2.84	1.06	35.8	0.5	60.2	71.3	89.6	12.8	13.1	13.3	232	193	294	0.962	1.962	12.54	12.85	13.16	229	191	288	s	Orange	6
+925	3506.3	28.7	2.1	-25.08	0.2	2.99	0.1	2.93	1.06	35.8	0.5	60.4	70.9	88.3	14.1	14.8	15.4	268	223	341	1.062	2.062	13.50	13.82	14.13	245	206	307	s	Orange	6
+925	3465.7	28.9	2.1	-24.41	0.2	2.20	0.1	2.95	1.06	35.8	0.5	60.5	70.9	88.4	12.8	13.3	13.8	236	198	295	0.977	1.977	12.75	13.06	13.37	231	194	290	s	Orange	6
+925	3649.6	28.7	2.1	-24.59	0.2	2.10	0.1	2.87	1.06	35.8	0.5	60.4	71.0	89.0	13.0	13.3	13.7	236	197	297	1.099	2.099	13.03	13.34	13.64	235	197	296	s	Orange	6
+925	3828.9	29.0	2.1	-23.89	0.2	2.04	0.1	2.78	1.06	35.8	0.5	60.3	71.8	90.6	12.3	12.6	12.9	225	186	287	1.021	2.021	12.25	12.58	12.88	224	186	285	s	Orange	6
+925	3970.1	28.9	2.1	-24.13	0.2	2.07	0.1	2.72	1.06	35.8	0.5	60.1	71.8	91.3	12.6	12.9	13.2	230	190	295	0.978	1.978	12.46	12.78	13.09	228	188	294	s	Orange	6
+925	4081.0	29.0	2.1	-24.67	0.2	1.99	0.1	2.67	1.06	35.8	0.5	60.6	72.3	92.7	13.0	13.4	13.7	242	199	313	0.945	1.945	13.00	13.31	13.62	241	198	312	s	Orange	6
+925	4321.1	29.2	2.1	-25.55	0.2	1.98	0.1	2.62	1.06	35.8	0.5	60.4	72.4	93.3	14.0	14.3	14.6	265	216	345	0.890	1.890	13.89	14.20	14.51	263	215	341	s	Orange	6
+925	4590.8	29.0	2.1	-25.07	0.2	1.98	0.1	2.56	1.06	35.8	0.5	60.1	73.1	95.1	13.5	13.8	14.1	253	206	331	1.047	2.047	13.52	13.84	14.16	254	206	332	s	Orange	6
+925	7140.3	28.7	2.0	-24.26	0.2	3.43	0.1	3.09	1.06	35.8	0.5	60.9	70.2	85.9	13.9	14.3	14.8	254	216	315	1.301	2.301	12.90	13.21	13.51	230	196	284	s	Orange	6
+925	13777.1	28.1	2.0	-23.00	0.2	3.71	0.1	3.47	1.06	35.8	0.5	60.8	68.8	82.0	12.8	13.3	13.8	224	194	270	1.858	2.858	12.08	12.39	12.70	208	180	248	s	Orange	6
+516	24404.4	31.5	2.0	-29.61	0.20	2.39	0.1	2.88	0.89	35.9	0.5	60.3	71.4	88.2	18.9	19.2	19.5	511	422	640	0.890	1.890	18.42	18.73	19.03	467	388	588	s	Red	6
+516	24717.4	33.7	2.0	-31.24	0.20	2.18	0.1	3.11	1.06	35.9	0.5	60.5	69.6	85.4	20.7	21.0	21.3	759	632	952	0.809	1.809	20.33	20.63	20.95	694	578	866	s	Red	6
+516	25877.8	37.8	2.0	-27.93	0.20	2.10	0.1	5.34	3.26	35.9	0.5	53.5	64.2	77.8	17.7	18.0	18.3	429	352	529	0.961	1.961	17.51	17.83	18.13	416	346	517	s	Red	6
+516	28116.1	27.4	2.0	-29.70	0.20	1.91	0.1	3.74	1.85	35.9	0.5	59.4	67.7	82.4	18.0	18.3	18.6	381	323	469	0.479	1.479	17.57	17.88	18.19	356	305	441	s	Red	6
+516	28563.7	32.5	2.0	-30.83	0.20	1.88	0.1	5.36	2.47	35.9	0.5	55.5	64.3	74.5	19.8	20.1	20.4	555	464	666	0.530	1.530	19.46	19.77	20.08	516	435	620	s	Red	6
+516	30098.5	33.5	2.0	-30.16	0.20	2.07	0.1	7.28	2.45	35.9	0.5	50.7	61.3	71.0	19.4	19.8	20.1	501	407	596	0.766	1.766	19.13	19.45	19.75	474	385	563	s	Red	6
+516	30712.7	34.8	2.0	-30.15	0.20	2.31	0.1	5.52	2.90	35.9	0.5	54.5	64.0	75.3	19.8	20.2	20.5	583	483	711	1.003	2.003	19.53	19.83	20.14	549	452	666	s	Red	6
+516	32320.8	29.0	2.0	-32.41	0.20	2.23	0.1	5.96	3.73	35.9	0.5	52.9	64.4	78.5	21.4	21.7	22.0	755	598	981	1.081	2.081	21.24	21.55	21.86	725	571	923	s	Red	6
+612	35018.7	28.9	2.0	-31.80	0.2	3.01	0.1	9.36	3.84	33.9	0.5	45.7	60.2	73.5	21.5	21.8	22.2	735	547	947	1.323	2.323	20.84	21.14	21.45	599	450	763	s	DimGray	6
+612	35233.6	27.9	2.0	-31.52	0.2	2.49	0.1	8.03	3.10	33.9	0.5	49.0	61.4	72.7	20.6	20.9	21.2	561	441	694	1.283	2.283	20.37	20.68	20.99	535	422	657	s	DimGray	6
+612	35601.7	28.5	2.0	-31.49	0.2	2.46	0.1	7.89	3.55	33.9	0.5	49.1	61.9	73.6	20.6	20.9	21.2	575	449	713	1.144	2.144	20.27	20.58	20.89	532	416	662	s	DimGray	6
+612	35907.3	28.9	2.0	-30.03	0.2	2.56	0.1	7.85	3.06	33.9	0.5	49.2	61.5	72.5	19.2	19.5	19.8	431	342	525	1.015	2.015	18.67	18.97	19.27	392	311	475	s	DimGray	6
+612	36114.2	26.8	2.0	-31.29	0.2	2.61	0.1	6.37	3.30	33.9	0.5	52.9	63.8	75.5	20.3	20.6	20.9	535	432	663	1.326	2.326	20.04	20.35	20.66	504	407	620	s	DimGray	6
+612	36658.4	29.4	2.0	-31.18	0.2	2.87	0.1	7.42	3.01	33.9	0.5	50.2	61.9	72.6	20.8	21.1	21.4	621	493	761	1.404	2.404	20.33	20.64	20.95	555	442	676	s	DimGray	6
+612	36964.6	27.5	2.0	-31.79	0.2	1.52	0.1	6.56	2.83	33.9	0.5	52.8	63.2	73.5	19.8	20.1	20.5	487	398	590	1.111	2.111	20.44	20.74	21.06	556	451	672	s	DimGray	6
+612	39871.2	32.4	2.0	-31.37	0.2	2.97	0.1	5.61	1.95	33.9	0.5	56.0	63.9	72.4	21.5	21.8	22.1	837	696	1011	1.158	2.158	20.66	20.97	21.28	666	562	785	s	DimGray	6
+612	42347.7	35.7	2.0	-32.98	0.2	1.93	0.1	4.89	1.93	33.9	0.5	57.0	64.6	73.5	22.5	22.9	23.2	1359	1101	1719	0.989	1.989	22.60	22.91	23.21	1398	1125	1778	s	DimGray	6
+612	45128.2	33.1	2.0	-31.91	0.2	2.83	0.1	5.69	2.10	33.9	0.5	55.9	63.8	72.4	22.0	22.3	22.6	1013	834	1235	0.898	1.898	21.06	21.37	21.67	748	625	894	s	DimGray	6
+277	33257.3	21.8	2.0	-33.55	0.20	3.10	0.1	7.84	3.52	34.0	0.5	49.9	62.9	74.9	22.6	22.9	23.2	963	726	1263	1.504	2.504	21.98	22.28	22.59	746	578	955	s	Purple	6
+277	34098.8	25.1	2.0	-34.39	0.20	2.81	0.1	8.77	3.16	34.0	0.5	47.3	61.0	73.5	23.6	23.9	24.2	1955	1346	2973	1.025	2.025	22.79	23.10	23.41	1123	841	1499	s	Purple	6
+277	35718.4	25.0	2.0	-32.56	0.20	3.07	0.1	8.64	2.64	34.0	0.5	48.2	60.7	72.4	21.9	22.2	22.5	760	588	965	0.992	1.992	20.81	21.12	21.42	545	425	679	s	Purple	6
+511	33172.9	9.4	2.0	-34.80	0.20	3.00	0.1	7.16	3.06	33.9	0.5	54.3	65.6	77.1	22.2	22.6	22.9	599	466	770	1.370	2.370	21.61	21.92	22.22	474	375	598	s	Pink	6
+511	33476.6	12.2	2.0	-34.71	0.20	2.92	0.1	6.85	2.83	33.9	0.5	54.7	65.3	75.9	22.4	22.7	23.0	706	551	906	1.571	2.571	22.06	22.38	22.68	610	482	767	s	Pink	6
+511	33613.4	10.0	2.0	-34.05	0.20	2.88	0.1	7.32	3.17	33.9	0.5	53.8	65.6	77.3	21.4	21.7	22.0	452	354	567	1.672	2.672	21.20	21.50	21.81	426	338	532	s	Pink	6
+511	35362.4	21.7	2.0	-34.00	0.20	3.05	0.1	6.42	2.47	33.9	0.5	54.5	64.2	73.4	23.0	23.3	23.6	1217	945	1610	1.278	2.278	22.21	22.52	22.83	835	667	1046	s	Pink	6
+511	37250.2	20.1	2.0	-33.66	0.20	2.95	0.1	8.30	3.76	33.9	0.5	49.2	62.5	75.5	22.3	22.6	22.9	814	613	1066	0.880	1.880	21.24	21.55	21.86	560	429	711	s	Pink	6
+925A	30719.1	34.6	2.0	-30.43	0.20	2.28	0.1	4.82	1.37	35.9	0.5	58.4	64.9	72.6	20.1	20.4	20.7	617	536	720	1.012	2.012	19.79	20.10	20.40	584	507	676	s	Orange	6
+925A	32520.5	35.4	2.0	-29.46	0.20	2.89	0.1	5.12	1.62	35.9	0.5	57.3	64.3	72.2	19.8	20.1	20.4	586	505	681	1.229	2.229	19.10	19.41	19.72	513	445	598	s	Orange	6
+925A	32605.3	35.6	2.0	-29.24	0.20	3.08	0.1	4.73	1.36	35.9	0.5	58.6	65.0	72.7	19.8	20.1	20.4	592	514	690	1.190	2.190	18.85	19.17	19.48	502	438	579	s	Orange	6
+925A	33328.7	34.9	2.0	-29.60	0.20	3.08	0.1	5.23	1.69	35.9	0.5	57.0	64.2	72.2	20.1	20.4	20.7	613	527	716	1.493	2.493	19.45	19.76	20.07	542	467	627	s	Orange	6
+925A	33768.3	27.9	2.0	-30.68	0.20	3.13	0.1	5.88	2.72	35.9	0.5	54.5	64.1	74.1	20.3	20.7	21.0	558	459	673	1.314	2.314	19.53	19.83	20.13	469	391	564	s	Orange	6
+925A	34139.2	34.8	2.0	-31.33	0.20	2.74	0.1	6.11	2.43	35.9	0.5	53.9	63.1	72.3	21.5	21.8	22.1	874	714	1064	1.021	2.021	20.78	21.09	21.39	710	588	855	s	Orange	6
+925A	35448.8	34.2	2.0	-30.84	0.20	2.93	0.1	6.76	2.80	35.9	0.5	51.5	62.3	72.2	21.1	21.4	21.7	757	608	922	1.251	2.251	20.42	20.73	21.04	634	512	768	s	Orange	6
+925A	35886.3	33.5	2.0	-33.27	0.20	3.14	0.1	6.60	2.30	35.9	0.5	52.9	62.4	71.5	23.8	24.1	24.4	3015	2090	4830	0.953	1.953	22.59	22.90	23.21	1268	1001	1609	s	Orange	6
+925A	36168.7	34.0	2.0	-30.56	0.20	3.23	0.1	6.67	2.19	35.9	0.5	52.7	62.4	70.9	21.1	21.4	21.7	748	613	898	1.274	2.274	20.12	20.43	20.74	588	488	694	s	Orange	6
+929E	32819.8	29.8	2.0	-30.08	0.20	3.14	0.1	6.11	2.34	35.7	0.5	54.7	63.6	72.6	20.0	20.3	20.6	530	443	631	1.169	2.169	18.97	19.28	19.59	437	367	515	s	Brown	6
+929E	33256.2	26.3	2.0	-28.88	0.20	3.06	0.1	5.22	1.40	35.7	0.5	58.4	65.0	72.3	18.2	18.5	18.8	364	318	417	1.504	2.504	17.64	17.95	18.25	336	293	385	s	Brown	6
+929E	33650.6	28.1	2.0	-29.75	0.20	3.44	0.1	5.52	2.41	35.7	0.5	55.9	64.5	74.4	19.7	20.0	20.3	491	412	586	1.640	2.640	18.89	19.19	19.50	422	356	500	s	Brown	6
+929E	34124.0	28.1	2.0	-30.91	0.20	2.77	0.1	6.37	2.95	35.7	0.5	53.2	63.7	74.4	20.3	20.6	20.9	543	444	663	1.023	2.023	19.49	19.80	20.10	464	380	563	s	Brown	6
+929E	34944.2	34.3	2.0	-31.52	0.20	2.88	0.1	5.94	2.50	35.7	0.5	54.1	63.3	73.2	21.8	22.1	22.4	947	768	1171	1.314	2.314	21.22	21.52	21.83	797	657	963	s	Brown	6
+929E	35558.0	35.1	2.0	-31.27	0.20	2.91	0.1	6.36	3.17	35.7	0.5	52.3	63.0	74.1	21.7	22.0	22.3	918	733	1149	0.999	1.999	20.72	21.03	21.34	698	562	860	s	Brown	6

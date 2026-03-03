@@ -188,7 +188,7 @@ class Data {
 
           // Check if mouse is over this data segment for tooltip
           if (pointX <= mouseX + shift && prevPointX > mouseX + shift) {
-            String mouseData = nfs(dataY[i], 0, 0) + " " + unit;
+            String mouseData = nfs(dataY[i], 0, 3) + " " + unit;
             dataDist = abs(mouseY - (y + dataY[i] * h));
 
             // Draw tooltip if cursor is enabled and in data area
