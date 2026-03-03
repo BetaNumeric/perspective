@@ -30,6 +30,38 @@ const SOLAR_SMOOTHING_WINDOW_DAYS_FAR = 100.0;
 const SOLAR_SMOOTHING_GRADIENT_EXPONENT = 1.5;
 const CO2_RAE_D11B_FILL_BEFORE_TIME = -4000000;
 const CO2_HOLE_FILL_TOLERANCE_YEARS = 50000;
+const GISS_REMOTE_UPDATE_ENABLED = true;
+const GISS_REMOTE_UPDATE_WINDOW_YEARS = 15;
+const GISS_REMOTE_URL = 'https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.txt';
+const GISS_REMOTE_URL_CANDIDATES = [
+  GISS_REMOTE_URL,
+  'https://corsproxy.io/?https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.txt',
+  'https://r.jina.ai/http://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.txt'
+];
+const CO2_REMOTE_UPDATE_ENABLED = true;
+const CO2_REMOTE_UPDATE_WINDOW_YEARS = 15;
+const CO2_REMOTE_DAILY_URL = 'https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_daily_mlo.txt';
+const CO2_REMOTE_DAILY_URL_CANDIDATES = [
+  CO2_REMOTE_DAILY_URL,
+  'https://corsproxy.io/?https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_daily_mlo.txt',
+  'https://r.jina.ai/http://gml.noaa.gov/webdata/ccgg/trends/co2/co2_daily_mlo.txt'
+];
+const SEALEVEL_REMOTE_UPDATE_ENABLED = true;
+const SEALEVEL_REMOTE_UPDATE_WINDOW_YEARS = 20;
+const SEALEVEL_REMOTE_URL = 'https://sealevel.colorado.edu/files/2026_rel1/gmsl_2026rel1_seasons_retained.txt';
+const SEALEVEL_REMOTE_URL_CANDIDATES = [
+  SEALEVEL_REMOTE_URL,
+  'https://corsproxy.io/?https://sealevel.colorado.edu/files/2026_rel1/gmsl_2026rel1_seasons_retained.txt',
+  'https://r.jina.ai/http://sealevel.colorado.edu/files/2026_rel1/gmsl_2026rel1_seasons_retained.txt'
+];
+const SOLAR_REMOTE_UPDATE_ENABLED = true;
+const SOLAR_REMOTE_UPDATE_WINDOW_YEARS = 5;
+const SOLAR_REMOTE_TSIS_URL = 'https://lasp.colorado.edu/lisird/latis/dap/tsis_tsi_24hr.txt';
+const SOLAR_REMOTE_TSIS_URL_CANDIDATES = [
+  SOLAR_REMOTE_TSIS_URL,
+  'https://corsproxy.io/?https://lasp.colorado.edu/lisird/latis/dap/tsis_tsi_24hr.txt',
+  'https://r.jina.ai/http://lasp.colorado.edu/lisird/latis/dap/tsis_tsi_24hr.txt'
+];
 
 // Global data structures and variables
 let data = [];                        // All loaded datasets
@@ -54,6 +86,14 @@ let perfTimelineLabels = 0;
 let solarCalibrationEnabled = true;
 let solarDespikeEnabled = true;
 let solarSmoothingEnabled = true;
+let gissRefreshStatus = 'local';
+let gissRefreshSource = 'local file';
+let co2RefreshStatus = 'local';
+let co2RefreshSource = 'local file';
+let sealevelRefreshStatus = 'local';
+let sealevelRefreshSource = 'local file';
+let solarRefreshStatus = 'local';
+let solarRefreshSource = 'local file';
 
 function preload() {
   // Orbital
@@ -77,8 +117,8 @@ function preload() {
   sourceTables.volcanicSaodRaw = loadStrings('data/volcanic/SAOD_merged_HolVol-v1_eVolv2k_v3_CMIP6_v3_-9500_to_2014_global_mean.csv'); // [-11,450, 64]
 
   // Solar Irradiance (oldest -> newest)
-  sourceTables.solarIrradianceSteinhilberRaw = loadStrings('data/solar/steinhilber2012.txt'); // ~[-9,400, ~0]
-  sourceTables.solarIrradianceLeanRaw = loadStrings('data/solar/lean2000_irradiance.txt'); // ~[-340, now]
+  //sourceTables.solarIrradianceSteinhilberRaw = loadStrings('data/solar/steinhilber2012.txt'); // ~[-9,400, ~0]
+  //sourceTables.solarIrradianceLeanRaw = loadStrings('data/solar/lean2000_irradiance.txt'); // ~[-340, now]
   sourceTables.solarIrradianceRaw = loadStrings('data/solar/nnl_tsi_P1D.txt'); // modern daily
   sourceTables.solarIrradianceTsisRaw = loadStrings('data/solar/tsis_tsi_24hr.txt'); // recent years
   sourceTables.solarIrradianceProcessed = loadTable('data/solar/Solar Irradiance Processed.csv', 'csv', 'header'); // processed cache
@@ -428,6 +468,220 @@ function mergeTemperatureTableWithGiss(paleoTable, gissRawLines) {
 
   if (mergedTable.getRowCount() > 0) return mergedTable;
   return paleoTable;
+}
+
+function mergeRecentTemperatureRows(baseTable, remoteRows, recentWindowYears) {
+  return mergeRecentRowsByWindow(
+    baseTable,
+    remoteRows,
+    recentWindowYears,
+    (table) => parseTemperatureTableRows(table),
+    'temperature',
+    'Temperature'
+  );
+}
+
+function mergeRecentRowsByWindow(baseTable, remoteRows, recentWindowYears, extractRowsFn, valueKey, valueColumn) {
+  if (!baseTable || !remoteRows || remoteRows.length === 0) return baseTable;
+
+  const baseRows = extractRowsFn(baseTable);
+  if (baseRows.length === 0) return baseTable;
+
+  const newestBaseTime = baseRows[0].time;
+  const cutoffTime = newestBaseTime - recentWindowYears;
+  const mergedRows = [];
+
+  for (let i = 0; i < baseRows.length; i++) {
+    if (baseRows[i].time >= cutoffTime) continue;
+    mergedRows.push({
+      time: baseRows[i].time,
+      [valueKey]: baseRows[i][valueKey]
+    });
+  }
+
+  for (let i = 0; i < remoteRows.length; i++) {
+    if (remoteRows[i].time < cutoffTime) continue;
+    mergedRows.push({
+      time: remoteRows[i].time,
+      [valueKey]: remoteRows[i][valueKey]
+    });
+  }
+
+  sortRowsByTimeDesc(mergedRows);
+  return buildTimeValueTable(mergedRows, valueKey, valueColumn, baseTable);
+}
+
+function mergeRecentCo2Rows(baseTable, remoteRows, recentWindowYears) {
+  return mergeRecentRowsByWindow(
+    baseTable,
+    remoteRows,
+    recentWindowYears,
+    (table) => parseCo2TableRows(table),
+    'co2',
+    'CO2'
+  );
+}
+
+function mergeRecentSealevelRows(baseTable, remoteRows, recentWindowYears) {
+  return mergeRecentRowsByWindow(
+    baseTable,
+    remoteRows,
+    recentWindowYears,
+    (table) => parseSeaLevelTableRows(table),
+    'sealevel',
+    'Sealevel'
+  );
+}
+
+function mergeRecentSolarRows(baseTable, remoteRows, recentWindowYears) {
+  return mergeRecentRowsByWindow(
+    baseTable,
+    remoteRows,
+    recentWindowYears,
+    (table) => extractTimeValueRows(table, 'Solar Irradiance', 'irradiance'),
+    'irradiance',
+    'Solar Irradiance'
+  );
+}
+
+function sourceLabelFromUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname;
+  } catch (error) {
+    return url;
+  }
+}
+
+async function refreshSeriesFromRemote(options) {
+  if (!options.enabled) return;
+  if (typeof fetch !== 'function') return;
+
+  options.setStatus('refreshing');
+  options.setSource('remote');
+  let lastError = null;
+
+  for (let i = 0; i < options.urlCandidates.length; i++) {
+    const candidateUrl = options.urlCandidates[i];
+
+    try {
+      const response = await fetch(candidateUrl, { cache: 'no-store' });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+
+      const rawText = await response.text();
+      const remoteRows = options.parseRows(rawText);
+      if (!remoteRows || remoteRows.length === 0) throw new Error('No parseable rows');
+
+      options.applyRows(remoteRows);
+      options.setStatus('remote-ok');
+      options.setSource(sourceLabelFromUrl(candidateUrl));
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  options.setStatus('local-fallback');
+  options.setSource('local file');
+  console.warn(options.warnLabel + ' failed; using local fallback.', lastError);
+}
+
+async function refreshTemperatureWithRemoteGiss() {
+  await refreshSeriesFromRemote({
+    enabled: GISS_REMOTE_UPDATE_ENABLED,
+    urlCandidates: GISS_REMOTE_URL_CANDIDATES,
+    parseRows: (rawText) => parseGissTemperatureRows(rawText.split(/\r?\n/)),
+    applyRows: (remoteRows) => {
+      sourceTables.temperature = mergeRecentTemperatureRows(
+        sourceTables.temperature,
+        remoteRows,
+        GISS_REMOTE_UPDATE_WINDOW_YEARS
+      );
+
+      if (data.length > 0 && data[0] && data[0].columnY === 'Temperature') {
+        data[0] = new Data(sourceTables.temperature, 'time', 'Temperature', '°C', 0, color(255), 0, true);
+        pScrollValue = -1;
+      }
+    },
+    setStatus: (status) => { gissRefreshStatus = status; },
+    setSource: (source) => { gissRefreshSource = source; },
+    warnLabel: 'Remote GISS refresh'
+  });
+}
+
+async function refreshCo2WithRemoteNoaaDaily() {
+  await refreshSeriesFromRemote({
+    enabled: CO2_REMOTE_UPDATE_ENABLED,
+    urlCandidates: CO2_REMOTE_DAILY_URL_CANDIDATES,
+    parseRows: (rawText) => parseNoaaDailyCo2Rows(rawText.split(/\r?\n/)),
+    applyRows: (remoteRows) => {
+      sourceTables.co2 = mergeRecentCo2Rows(
+        sourceTables.co2,
+        remoteRows,
+        CO2_REMOTE_UPDATE_WINDOW_YEARS
+      );
+
+      for (let j = 0; j < data.length; j++) {
+        if (data[j].columnY !== 'CO2') continue;
+        data[j] = new Data(sourceTables.co2, 'time', 'CO2', 'ppm', 1, color(255, 128, 64), 0, true);
+        pScrollValue = -1;
+        break;
+      }
+    },
+    setStatus: (status) => { co2RefreshStatus = status; },
+    setSource: (source) => { co2RefreshSource = source; },
+    warnLabel: 'Remote CO2 refresh'
+  });
+}
+
+async function refreshSealevelWithRemoteColorado() {
+  await refreshSeriesFromRemote({
+    enabled: SEALEVEL_REMOTE_UPDATE_ENABLED,
+    urlCandidates: SEALEVEL_REMOTE_URL_CANDIDATES,
+    parseRows: (rawText) => parseColoradoSeaLevelRows(rawText.split(/\r?\n/)),
+    applyRows: (remoteRows) => {
+      sourceTables.sealevel = mergeRecentSealevelRows(
+        sourceTables.sealevel,
+        remoteRows,
+        SEALEVEL_REMOTE_UPDATE_WINDOW_YEARS
+      );
+
+      for (let j = 0; j < data.length; j++) {
+        if (data[j].columnY !== 'Sealevel') continue;
+        data[j] = new Data(sourceTables.sealevel, 'time', 'Sealevel', 'm', 1, color(0, 128, 255), 0, true);
+        pScrollValue = -1;
+        break;
+      }
+    },
+    setStatus: (status) => { sealevelRefreshStatus = status; },
+    setSource: (source) => { sealevelRefreshSource = source; },
+    warnLabel: 'Remote sea level refresh'
+  });
+}
+
+async function refreshSolarWithRemoteTsis() {
+  await refreshSeriesFromRemote({
+    enabled: SOLAR_REMOTE_UPDATE_ENABLED,
+    urlCandidates: SOLAR_REMOTE_TSIS_URL_CANDIDATES,
+    parseRows: (rawText) => parseTsis24hrSolarRows(rawText.split(/\r?\n/)),
+    applyRows: (remoteRows) => {
+      sourceTables.solarIrradiance = mergeRecentSolarRows(
+        sourceTables.solarIrradiance,
+        remoteRows,
+        SOLAR_REMOTE_UPDATE_WINDOW_YEARS
+      );
+
+      for (let j = 0; j < data.length; j++) {
+        if (data[j].columnY !== 'Solar Irradiance') continue;
+        data[j] = new Data(sourceTables.solarIrradiance, 'time', 'Solar Irradiance', 'W/m²', 1, color(255, 220, 0), 0, true);
+        pScrollValue = -1;
+        break;
+      }
+    },
+    setStatus: (status) => { solarRefreshStatus = status; },
+    setSource: (source) => { solarRefreshSource = source; },
+    warnLabel: 'Remote solar refresh'
+  });
 }
 
 function parseNoaaDailyCo2Rows(rawLines) {
@@ -1532,6 +1786,11 @@ function setup() {
   data.push(new Data(sourceTables.population, 'time', 'Population', 'people', 1, color(255, 128, 200), 0, true));
 
   maxData = data.length - 1; // Set maximum dataset count
+
+  refreshTemperatureWithRemoteGiss();
+  refreshCo2WithRemoteNoaaDaily();
+  refreshSealevelWithRemoteColorado();
+  refreshSolarWithRemoteTsis();
 }
 
 function draw() {
@@ -1675,13 +1934,21 @@ function draw() {
       const perfLine1 = `FPS: ${nfs(frameRate(), 0, 1)}  Zoom: ${nfc(scrollValue, 0)}`;
       const perfLine2 = `Data verts: ${perfDataVertices}  Events drawn: ${perfEventsDrawn}  culled: ${perfEventsCulled}`;
       const perfLine3 = `Timeline labels: ${perfTimelineLabels} / ticks: ${perfTimelineTicks}`;
+      const perfLine4 = `Temp refresh: ${gissRefreshStatus} (${gissRefreshSource})`;
+      const perfLine5 = `CO2 refresh: ${co2RefreshStatus} (${co2RefreshSource})`;
+      const perfLine6 = `Sea lvl refresh: ${sealevelRefreshStatus} (${sealevelRefreshSource})`;
+      const perfLine7 = `Solar refresh: ${solarRefreshStatus} (${solarRefreshSource})`;
       fill(0, 32, 64, BACKGROUND_ALPHA_HIGH);
-      rect(8, 8, max(textWidth(perfLine1), max(textWidth(perfLine2), textWidth(perfLine3))) + 12, height / TEXT_SIZE_DIVISOR_TINY * 4);
+      rect(8, 8, max(textWidth(perfLine1), max(textWidth(perfLine2), max(textWidth(perfLine3), max(textWidth(perfLine4), max(textWidth(perfLine5), max(textWidth(perfLine6), textWidth(perfLine7))))))) + 12, height / TEXT_SIZE_DIVISOR_TINY * 8);
       fill(255);
       noStroke();
       text(perfLine1, 14, 10);
       text(perfLine2, 14, 10 + height / TEXT_SIZE_DIVISOR_TINY);
       text(perfLine3, 14, 10 + 2 * (height / TEXT_SIZE_DIVISOR_TINY));
+      text(perfLine4, 14, 10 + 3 * (height / TEXT_SIZE_DIVISOR_TINY));
+      text(perfLine5, 14, 10 + 4 * (height / TEXT_SIZE_DIVISOR_TINY));
+      text(perfLine6, 14, 10 + 5 * (height / TEXT_SIZE_DIVISOR_TINY));
+      text(perfLine7, 14, 10 + 6 * (height / TEXT_SIZE_DIVISOR_TINY));
     }
   }
   pScrollValue = scrollValue; // Store previous scroll value for change detection
