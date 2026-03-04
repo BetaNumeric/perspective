@@ -69,25 +69,26 @@ Notes
 
 ## Solar Irradiance
 
-- `data/solar/steinhilber2012.txt`
-  - Coverage: ~9400 yr BP to near-present
-  - Source: https://www.ncei.noaa.gov/pub/data/paleo/climate_forcing/solar_variability/steinhilber2012.txt
+- `data/solar/SATIRE-M/SSI_14C_cycle_yearly_cmip_v20160613_fc.txt`
+  - Coverage: 6754.5 BCE to 2015.997 CE (yearly cadence before 1850, daily after)
+  - Product: PMIP4 SATIRE-M 14C, CMIP6-scaled (`fc`), recommended for PMIP4-CMIP6 tier-1 past1000
+  - Source: https://pmip4.lsce.ipsl.fr/doku.php/data:solar_satire
+  - https://sharebox.lsce.ipsl.fr/index.php/s/LpiCUCkSmx0P6bb
 
-- `data/solar/lean2000_irradiance.txt`
-  - Coverage: ~1610 CE onward
-  - Source: https://www.ncei.noaa.gov/pub/data/paleo/climate_forcing/solar_variability/lean2000_irradiance.txt
+- `data/solar/SATIRE_M_TSI_14C_fc.csv`
+  - Coverage: project time ~[-8704.5, 65.9973]
+  - Type: compact runtime TSI derivative used by `sketch.js`
+  - Build: `python scripts/build_satire_tsi.py` (TSI computed as `sum(SSI * wavelength_bin)` for each time step)
 
 - `data/solar/nnl_tsi_P1D.txt`
-  - Coverage: modern daily era
+  - Coverage: ~late 1800s to near-present (daily)
+  - Type: continuation segment merged on top of SATIRE in `sketch.js`
   - Source: https://lasp.colorado.edu/lisird/latis/dap/nnl_tsi_P1D.txt
 
 - `data/solar/tsis_tsi_24hr.txt`
-  - Coverage: recent years, 24-hour cadence
+  - Coverage: recent years to present (24-hour cadence)
+  - Type: latest continuation segment merged on top of NNL in `sketch.js`
   - Source: https://lasp.colorado.edu/lisird/latis/dap/tsis_tsi_24hr.txt
-
-- `data/solar/Solar Irradiance Processed.csv`
-  - Coverage: project-local cached processed composite
-  - Source: generated/maintained in project
 
 ## Sea Level
 

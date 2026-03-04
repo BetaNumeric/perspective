@@ -19,15 +19,14 @@ const BACKGROUND_ALPHA_HIGH = 230;    // High opacity background
 const STROKE_ALPHA_LOW = 64;          // Low opacity stroke
 const STROKE_ALPHA_MEDIUM = 100;      // Medium opacity stroke
 const TIMELINE_LABEL_MIN_SPACING = 70;
+const TEMPERATURE_VARIABILITY_MATCH_ENABLED = true;
+const TEMPERATURE_NEUKOM_MATCH_WINDOW_YEARS = 120;
+const TEMPERATURE_GISS_MATCH_WINDOW_YEARS = 20;
+const TEMPERATURE_VARIABILITY_MIN_SCALE = 0.15;
+const TEMPERATURE_VARIABILITY_MAX_SCALE = 3.0;
+const SOLAR_DENSE_SMOOTH_START_TIME = -100; // 1850 CE in year-1950 axis
+const SOLAR_DENSE_SMOOTH_WINDOW_DAYS = 50;
 
-// Solar processing controls
-const SOLAR_DESPIKE_HAMPEL_RADIUS = 50;
-const SOLAR_DESPIKE_SIGMA_THRESHOLD = 4.0;
-const SOLAR_DESPIKE_MAD_SCALE = 1.4826;
-const SOLAR_DENSE_THRESHOLD_YEARS = 0.03;
-const SOLAR_SMOOTHING_WINDOW_DAYS_NEAR = 10.0;
-const SOLAR_SMOOTHING_WINDOW_DAYS_FAR = 100.0;
-const SOLAR_SMOOTHING_GRADIENT_EXPONENT = 1.5;
 const CO2_RAE_D11B_FILL_BEFORE_TIME = -4000000;
 const CO2_HOLE_FILL_TOLERANCE_YEARS = 50000;
 const GISS_REMOTE_UPDATE_ENABLED = true;
@@ -55,7 +54,6 @@ const SEALEVEL_REMOTE_URL_CANDIDATES = [
   'https://r.jina.ai/http://sealevel.colorado.edu/files/2026_rel1/gmsl_2026rel1_seasons_retained.txt'
 ];
 const SOLAR_REMOTE_UPDATE_ENABLED = true;
-const SOLAR_REMOTE_UPDATE_WINDOW_YEARS = 5;
 const SOLAR_REMOTE_TSIS_URL = 'https://lasp.colorado.edu/lisird/latis/dap/tsis_tsi_24hr.txt';
 const SOLAR_REMOTE_TSIS_URL_CANDIDATES = [
   SOLAR_REMOTE_TSIS_URL,
@@ -75,6 +73,7 @@ let currentYear = 0;                  // Right-edge timeline anchor (current yea
 let yearShift = 0;                    // Year alignment offset
 let shift = SHIFT_OFFSET;             // Left margin shift
 let showCursor = true;                // Crosshair/tooltip visibility toggle
+let showDataSourceTooltip = false;    // Optional tooltip source label toggle
 let selectedData = 0;                 // Currently selected dataset index
 let maxData = 0;                      // Maximum dataset count
 let perfHUD = false;
@@ -83,9 +82,6 @@ let perfEventsDrawn = 0;
 let perfEventsCulled = 0;
 let perfTimelineTicks = 0;
 let perfTimelineLabels = 0;
-let solarCalibrationEnabled = true;
-let solarDespikeEnabled = true;
-let solarSmoothingEnabled = true;
 let gissRefreshStatus = 'local';
 let gissRefreshSource = 'local file';
 let co2RefreshStatus = 'local';
@@ -94,6 +90,10 @@ let sealevelRefreshStatus = 'local';
 let sealevelRefreshSource = 'local file';
 let solarRefreshStatus = 'local';
 let solarRefreshSource = 'local file';
+let solarNnlNewestTime = Number.NEGATIVE_INFINITY;
+let solarNnlOldestTime = Number.POSITIVE_INFINITY;
+let solarTsisNewestTime = Number.NEGATIVE_INFINITY;
+let solarTsisOldestTime = Number.POSITIVE_INFINITY;
 
 function preload() {
   // Orbital
@@ -116,12 +116,10 @@ function preload() {
   // Volcanic
   sourceTables.volcanicSaodRaw = loadStrings('data/volcanic/SAOD_merged_HolVol-v1_eVolv2k_v3_CMIP6_v3_-9500_to_2014_global_mean.csv'); // [-11,450, 64]
 
-  // Solar Irradiance (oldest -> newest)
-  //sourceTables.solarIrradianceSteinhilberRaw = loadStrings('data/solar/steinhilber2012.txt'); // ~[-9,400, ~0]
-  //sourceTables.solarIrradianceLeanRaw = loadStrings('data/solar/lean2000_irradiance.txt'); // ~[-340, now]
-  sourceTables.solarIrradianceRaw = loadStrings('data/solar/nnl_tsi_P1D.txt'); // modern daily
-  sourceTables.solarIrradianceTsisRaw = loadStrings('data/solar/tsis_tsi_24hr.txt'); // recent years
-  sourceTables.solarIrradianceProcessed = loadTable('data/solar/Solar Irradiance Processed.csv', 'csv', 'header'); // processed cache
+  // Solar Irradiance
+  sourceTables.solarIrradiance = loadTable('data/solar/SATIRE_M_TSI_14C_fc.csv', 'csv', 'header'); // ~[-8,704, 66]
+  sourceTables.solarIrradianceNnlRaw = loadStrings('data/solar/nnl_tsi_P1D.txt'); // ~[late 1800s, recent]
+  sourceTables.solarIrradianceTsisRaw = loadStrings('data/solar/tsis_tsi_24hr.txt'); // ~[recent years, now]
 
   // Sea Level (oldest -> newest)
   sourceTables.sealevelMillerRaw = loadStrings('data/sealevel/miller2024-sealevel.txt'); // deep-time (multi-Myr)
@@ -212,6 +210,34 @@ function averageRowsInRange(rows, valueKey, startTime, endTime) {
   return sum / count;
 }
 
+function rowStatsInRange(rows, valueKey, startTime, endTime) {
+  let count = 0;
+  let mean = 0;
+  let m2 = 0;
+
+  for (let i = 0; i < rows.length; i++) {
+    const timeValue = rows[i].time;
+    const value = rows[i][valueKey];
+    if (timeValue < startTime || timeValue > endTime) continue;
+    if (!Number.isFinite(value)) continue;
+
+    count++;
+    const delta = value - mean;
+    mean += delta / count;
+    const delta2 = value - mean;
+    m2 += delta * delta2;
+  }
+
+  if (count === 0) return null;
+  if (count === 1) return { count, mean, std: 0 };
+
+  return {
+    count,
+    mean,
+    std: sqrt(m2 / count)
+  };
+}
+
 function calibrateRowsToReferenceByOverlap(sourceRows, referenceRows, valueKey) {
   if (sourceRows.length === 0 || referenceRows.length === 0) return sourceRows;
 
@@ -271,6 +297,42 @@ function calibrateRowsToReferenceByBoundary(sourceRows, referenceRows, valueKey,
     calibrated[i] = {
       ...sourceRows[i],
       [valueKey]: sourceRows[i][valueKey] + offset
+    };
+  }
+
+  return calibrated;
+}
+
+function calibrateRowsToReferenceByBoundaryWithVariability(
+  sourceRows,
+  referenceRows,
+  valueKey,
+  windowYears = 30,
+  minScale = 0.15,
+  maxScale = 3.0
+) {
+  if (sourceRows.length === 0 || referenceRows.length === 0) return sourceRows;
+
+  const boundaryTime = referenceRows[referenceRows.length - 1].time;
+  if (!Number.isFinite(boundaryTime)) return sourceRows;
+
+  const sourceStats = rowStatsInRange(sourceRows, valueKey, boundaryTime - windowYears, boundaryTime);
+  const referenceStats = rowStatsInRange(referenceRows, valueKey, boundaryTime, boundaryTime + windowYears);
+  if (!sourceStats || !referenceStats) return sourceRows;
+
+  let scale = 1;
+  if (sourceStats.std > 0 && referenceStats.std > 0) {
+    scale = referenceStats.std / sourceStats.std;
+  }
+
+  scale = constrain(scale, minScale, maxScale);
+  const offset = referenceStats.mean - (sourceStats.mean * scale);
+
+  const calibrated = new Array(sourceRows.length);
+  for (let i = 0; i < sourceRows.length; i++) {
+    calibrated[i] = {
+      ...sourceRows[i],
+      [valueKey]: sourceRows[i][valueKey] * scale + offset
     };
   }
 
@@ -430,10 +492,20 @@ function mergeTemperatureTableWithNeukom(baseTable, neukomRawLines) {
   if (neukomRows.length === 0) return baseTable;
 
   const baseRows = parseTemperatureTableRows(baseTable);
+  const calibratedBaseRows = TEMPERATURE_VARIABILITY_MATCH_ENABLED
+    ? calibrateRowsToReferenceByBoundaryWithVariability(
+      baseRows,
+      neukomRows,
+      'temperature',
+      TEMPERATURE_NEUKOM_MATCH_WINDOW_YEARS,
+      TEMPERATURE_VARIABILITY_MIN_SCALE,
+      TEMPERATURE_VARIABILITY_MAX_SCALE
+    )
+    : baseRows;
   const newestNeukomTime = neukomRows[0].time;
   const oldestNeukomTime = neukomRows[neukomRows.length - 1].time;
   const mergedRows = cloneTimeValueRows(neukomRows, 'temperature');
-  appendRowsOutsideInclusiveRange(mergedRows, baseRows, 'temperature', newestNeukomTime, oldestNeukomTime);
+  appendRowsOutsideInclusiveRange(mergedRows, calibratedBaseRows, 'temperature', newestNeukomTime, oldestNeukomTime);
 
   sortRowsByTimeDesc(mergedRows);
   return buildTimeValueTable(mergedRows, 'temperature', 'Temperature', baseTable);
@@ -446,6 +518,13 @@ function mergeTemperatureTableWithGiss(paleoTable, gissRawLines) {
 
   const modernStartTime = -70; // 1880 CE in the project's 1950-based axis
   const gissRows = parseGissTemperatureRows(gissRawLines);
+  const paleoRows = parseTemperatureTableRows(paleoTable);
+  const calibratedPaleoRows = calibrateRowsToReferenceByBoundary(
+    paleoRows,
+    gissRows,
+    'temperature',
+    TEMPERATURE_GISS_MATCH_WINDOW_YEARS
+  );
 
   for (let i = 0; i < gissRows.length; i++) {
     const row = mergedTable.addRow();
@@ -453,10 +532,9 @@ function mergeTemperatureTableWithGiss(paleoTable, gissRawLines) {
     row.setNum('Temperature', gissRows[i].temperature);
   }
 
-  for (let i = 0; i < paleoTable.getRowCount(); i++) {
-    const sourceRow = paleoTable.getRow(i);
-    const timeValue = sourceRow.getNum('time');
-    const tempValue = sourceRow.getNum('Temperature');
+  for (let i = 0; i < calibratedPaleoRows.length; i++) {
+    const timeValue = calibratedPaleoRows[i].time;
+    const tempValue = calibratedPaleoRows[i].temperature;
 
     if (!Number.isFinite(timeValue) || !Number.isFinite(tempValue)) continue;
     if (timeValue >= modernStartTime) continue;
@@ -530,17 +608,6 @@ function mergeRecentSealevelRows(baseTable, remoteRows, recentWindowYears) {
     (table) => parseSeaLevelTableRows(table),
     'sealevel',
     'Sealevel'
-  );
-}
-
-function mergeRecentSolarRows(baseTable, remoteRows, recentWindowYears) {
-  return mergeRecentRowsByWindow(
-    baseTable,
-    remoteRows,
-    recentWindowYears,
-    (table) => extractTimeValueRows(table, 'Solar Irradiance', 'irradiance'),
-    'irradiance',
-    'Solar Irradiance'
   );
 }
 
@@ -663,13 +730,9 @@ async function refreshSolarWithRemoteTsis() {
   await refreshSeriesFromRemote({
     enabled: SOLAR_REMOTE_UPDATE_ENABLED,
     urlCandidates: SOLAR_REMOTE_TSIS_URL_CANDIDATES,
-    parseRows: (rawText) => parseTsis24hrSolarRows(rawText.split(/\r?\n/)),
+    parseRows: (rawText) => parseTsisSolarRows(rawText.split(/\r?\n/)),
     applyRows: (remoteRows) => {
-      sourceTables.solarIrradiance = mergeRecentSolarRows(
-        sourceTables.solarIrradiance,
-        remoteRows,
-        SOLAR_REMOTE_UPDATE_WINDOW_YEARS
-      );
+      sourceTables.solarIrradiance = mergeSolarTableWithTsisRows(sourceTables.solarIrradiance, remoteRows);
 
       for (let j = 0; j < data.length; j++) {
         if (data[j].columnY !== 'Solar Irradiance') continue;
@@ -680,8 +743,15 @@ async function refreshSolarWithRemoteTsis() {
     },
     setStatus: (status) => { solarRefreshStatus = status; },
     setSource: (source) => { solarRefreshSource = source; },
-    warnLabel: 'Remote solar refresh'
+    warnLabel: 'Remote solar TSIS refresh'
   });
+}
+
+function refreshAllRemoteSeries() {
+  refreshTemperatureWithRemoteGiss();
+  refreshCo2WithRemoteNoaaDaily();
+  refreshSealevelWithRemoteColorado();
+  refreshSolarWithRemoteTsis();
 }
 
 function parseNoaaDailyCo2Rows(rawLines) {
@@ -1278,6 +1348,204 @@ function parseSeaLevelTableRows(table) {
   return extractTimeValueRows(table, 'Sealevel', 'sealevel');
 }
 
+function parseSolarIrradianceTableRows(table) {
+  return extractTimeValueRows(table, 'Solar Irradiance', 'irradiance');
+}
+
+function parseNnlSolarRows(rawLines) {
+  const rows = [];
+  if (!rawLines || rawLines.length === 0) return rows;
+
+  const daysPerYear = 365.2425;
+  const baseYear = 1610;
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i].trim();
+    if (line.length === 0 || line.startsWith('#')) continue;
+
+    const tokens = line.split(/[\s,]+/).filter((token) => token.length > 0);
+    if (tokens.length < 2) continue;
+
+    const daysSinceBase = parseFloat(tokens[0]);
+    const irradiance = parseFloat(tokens[1]);
+    if (!Number.isFinite(daysSinceBase) || !Number.isFinite(irradiance)) continue;
+    if (irradiance <= 0) continue;
+
+    const decimalYear = baseYear + (daysSinceBase / daysPerYear);
+    rows.push({
+      time: decimalYear - 1950,
+      irradiance
+    });
+  }
+
+  return sortRowsByTimeDesc(rows);
+}
+
+function parseTsisSolarRows(rawLines) {
+  const rows = [];
+  if (!rawLines || rawLines.length === 0) return rows;
+
+  const julianAt2000 = 2451545.0;
+  const daysPerYear = 365.2425;
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i].trim();
+    if (line.length === 0 || line.startsWith('#')) continue;
+
+    const tokens = line.split(/[\s,]+/).filter((token) => token.length > 0);
+    if (tokens.length < 2) continue;
+
+    const julianDate = parseFloat(tokens[0]);
+    const irradiance = parseFloat(tokens[1]);
+    if (!Number.isFinite(julianDate) || !Number.isFinite(irradiance)) continue;
+    if (irradiance <= 0) continue;
+
+    const decimalYear = 2000 + ((julianDate - julianAt2000) / daysPerYear);
+    rows.push({
+      time: decimalYear - 1950,
+      irradiance
+    });
+  }
+
+  return sortRowsByTimeDesc(rows);
+}
+
+function smoothDenseSolarRows(rows, denseStartTime, windowDays) {
+  if (!rows || rows.length < 3) return rows;
+  if (!Number.isFinite(windowDays) || windowDays <= 0) return rows;
+
+  let denseCount = 0;
+  while (denseCount < rows.length && rows[denseCount].time >= denseStartTime) denseCount++;
+  if (denseCount < 3) return rows;
+
+  const windowYears = windowDays / 365.2425;
+  const ascendingTimes = new Array(denseCount);
+  const ascendingValues = new Array(denseCount);
+
+  for (let i = 0; i < denseCount; i++) {
+    const source = rows[denseCount - 1 - i];
+    ascendingTimes[i] = source.time;
+    ascendingValues[i] = source.irradiance;
+  }
+
+  const prefix = new Array(denseCount + 1);
+  prefix[0] = 0;
+  for (let i = 0; i < denseCount; i++) {
+    prefix[i + 1] = prefix[i] + ascendingValues[i];
+  }
+
+  const smoothedAscending = new Array(denseCount);
+  let lower = 0;
+  let upper = -1;
+
+  for (let i = 0; i < denseCount; i++) {
+    const currentTime = ascendingTimes[i];
+    const minTime = currentTime - windowYears;
+    const maxTime = currentTime + windowYears;
+
+    while (lower < denseCount && ascendingTimes[lower] < minTime) lower++;
+    if (upper < lower - 1) upper = lower - 1;
+    while (upper + 1 < denseCount && ascendingTimes[upper + 1] <= maxTime) upper++;
+
+    const count = max(1, upper - lower + 1);
+    const sum = prefix[upper + 1] - prefix[lower];
+    smoothedAscending[i] = sum / count;
+  }
+
+  const smoothedRows = cloneTimeValueRows(rows, 'irradiance');
+  for (let i = 0; i < denseCount; i++) {
+    smoothedRows[denseCount - 1 - i].irradiance = smoothedAscending[i];
+  }
+
+  return smoothedRows;
+}
+
+function mergeSolarTableWithTsisRows(baseTable, tsisRows) {
+  if (!baseTable || !tsisRows || tsisRows.length === 0) return baseTable;
+
+  const baseRows = parseSolarIrradianceTableRows(baseTable);
+  if (baseRows.length === 0) return baseTable;
+
+  const calibratedTsisRows = calibrateRowsToReferenceByOverlap(tsisRows, baseRows, 'irradiance');
+  if (calibratedTsisRows.length === 0) return baseTable;
+
+  solarTsisNewestTime = calibratedTsisRows[0].time;
+  solarTsisOldestTime = calibratedTsisRows[calibratedTsisRows.length - 1].time;
+
+  const newestTsisTime = calibratedTsisRows[0].time;
+  const oldestTsisTime = calibratedTsisRows[calibratedTsisRows.length - 1].time;
+  const mergedRows = cloneTimeValueRows(calibratedTsisRows, 'irradiance');
+  appendRowsOutsideInclusiveRange(mergedRows, baseRows, 'irradiance', newestTsisTime, oldestTsisTime);
+
+  sortRowsByTimeDesc(mergedRows);
+  const smoothedRows = smoothDenseSolarRows(
+    mergedRows,
+    SOLAR_DENSE_SMOOTH_START_TIME,
+    SOLAR_DENSE_SMOOTH_WINDOW_DAYS
+  );
+  return buildTimeValueTable(smoothedRows, 'irradiance', 'Solar Irradiance', baseTable);
+}
+
+function mergeSolarTableWithNnlAndTsis(baseTable, nnlRawLines, tsisRawLines) {
+  const baseRows = parseSolarIrradianceTableRows(baseTable);
+  if (baseRows.length === 0) return baseTable;
+
+  const nnlRows = parseNnlSolarRows(nnlRawLines);
+  const calibratedNnlRows = nnlRows.length > 0
+    ? calibrateRowsToReferenceByOverlap(nnlRows, baseRows, 'irradiance')
+    : [];
+
+  const tsisRows = parseTsisSolarRows(tsisRawLines);
+  const referenceRowsForTsis = calibratedNnlRows.length > 0 ? calibratedNnlRows : baseRows;
+  const calibratedTsisRows = tsisRows.length > 0
+    ? calibrateRowsToReferenceByOverlap(tsisRows, referenceRowsForTsis, 'irradiance')
+    : [];
+
+  solarNnlNewestTime = calibratedNnlRows.length > 0 ? calibratedNnlRows[0].time : Number.NEGATIVE_INFINITY;
+  solarNnlOldestTime = calibratedNnlRows.length > 0 ? calibratedNnlRows[calibratedNnlRows.length - 1].time : Number.POSITIVE_INFINITY;
+  solarTsisNewestTime = calibratedTsisRows.length > 0 ? calibratedTsisRows[0].time : Number.NEGATIVE_INFINITY;
+  solarTsisOldestTime = calibratedTsisRows.length > 0 ? calibratedTsisRows[calibratedTsisRows.length - 1].time : Number.POSITIVE_INFINITY;
+
+  if (calibratedNnlRows.length === 0 && calibratedTsisRows.length === 0) return baseTable;
+
+  const mergedRows = [];
+
+  if (calibratedTsisRows.length > 0) {
+    for (let i = 0; i < calibratedTsisRows.length; i++) {
+      mergedRows.push({
+        time: calibratedTsisRows[i].time,
+        irradiance: calibratedTsisRows[i].irradiance
+      });
+    }
+  }
+
+  if (calibratedNnlRows.length > 0) {
+    if (calibratedTsisRows.length > 0) {
+      const newestTsisTime = calibratedTsisRows[0].time;
+      const oldestTsisTime = calibratedTsisRows[calibratedTsisRows.length - 1].time;
+      appendRowsOutsideInclusiveRange(mergedRows, calibratedNnlRows, 'irradiance', newestTsisTime, oldestTsisTime);
+    } else {
+      appendRowsOutsideInclusiveRange(mergedRows, calibratedNnlRows, 'irradiance', Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY);
+    }
+
+    const newestNnlTime = calibratedNnlRows[0].time;
+    const oldestNnlTime = calibratedNnlRows[calibratedNnlRows.length - 1].time;
+    appendRowsOutsideInclusiveRange(mergedRows, baseRows, 'irradiance', newestNnlTime, oldestNnlTime);
+  } else {
+    const newestTsisTime = calibratedTsisRows[0].time;
+    const oldestTsisTime = calibratedTsisRows[calibratedTsisRows.length - 1].time;
+    appendRowsOutsideInclusiveRange(mergedRows, baseRows, 'irradiance', newestTsisTime, oldestTsisTime);
+  }
+
+  sortRowsByTimeDesc(mergedRows);
+  const smoothedRows = smoothDenseSolarRows(
+    mergedRows,
+    SOLAR_DENSE_SMOOTH_START_TIME,
+    SOLAR_DENSE_SMOOTH_WINDOW_DAYS
+  );
+  return buildTimeValueTable(smoothedRows, 'irradiance', 'Solar Irradiance', baseTable);
+}
+
 function averageSeaLevelInRange(rows, startTime, endTime) {
   return averageRowsInRange(rows, 'sealevel', startTime, endTime);
 }
@@ -1367,129 +1635,6 @@ function mergeSeaLevelTableWithColorado(legacyTable, coloradoRawLines, gpRawLine
   return legacyTable;
 }
 
-function parseLaspDailySolarRows(rawLines) {
-  const rows = [];
-  if (!rawLines || rawLines.length === 0) return rows;
-
-  const daysPerYear = 365.2425;
-  const baseYear = 1610;
-
-  for (let i = 0; i < rawLines.length; i++) {
-    const line = rawLines[i].trim();
-    if (line.length === 0 || line.startsWith('#')) continue;
-
-    const tokens = line.split(/[\s,]+/).filter((token) => token.length > 0);
-    if (tokens.length < 2) continue;
-
-    const daysSinceBase = parseFloat(tokens[0]);
-    const irradiance = parseFloat(tokens[1]);
-    if (!Number.isFinite(daysSinceBase) || !Number.isFinite(irradiance)) continue;
-
-    const decimalYear = baseYear + (daysSinceBase / daysPerYear);
-    rows.push({
-      time: decimalYear - 1950,
-      irradiance
-    });
-  }
-
-  return sortRowsByTimeDesc(rows);
-}
-
-function parseTsis24hrSolarRows(rawLines) {
-  const rows = [];
-  if (!rawLines || rawLines.length === 0) return rows;
-
-  const julianAt2000 = 2451545.0;
-  const daysPerYear = 365.2425;
-
-  for (let i = 0; i < rawLines.length; i++) {
-    const line = rawLines[i].trim();
-    if (line.length === 0 || line.startsWith('#')) continue;
-
-    const tokens = line.split(/[\s,]+/).filter((token) => token.length > 0);
-    if (tokens.length < 2) continue;
-
-    const julianDate = parseFloat(tokens[0]);
-    const irradiance = parseFloat(tokens[1]);
-    if (!Number.isFinite(julianDate) || !Number.isFinite(irradiance)) continue;
-    if (irradiance <= 0) continue;
-
-    const decimalYear = 2000 + ((julianDate - julianAt2000) / daysPerYear);
-    rows.push({
-      time: decimalYear - 1950,
-      irradiance
-    });
-  }
-
-  return sortRowsByTimeDesc(rows);
-}
-
-function parseLean2000SolarRows(rawLines) {
-  const rows = [];
-  if (!rawLines || rawLines.length === 0) return rows;
-
-  for (let i = 0; i < rawLines.length; i++) {
-    const line = rawLines[i].trim();
-    if (line.length === 0) continue;
-
-    const tokens = line.split(/\s+/);
-    if (tokens.length < 3) continue;
-
-    const decimalYear = parseFloat(tokens[0]);
-    const irradianceWithBackground = parseFloat(tokens[2]);
-    if (!Number.isFinite(decimalYear) || !Number.isFinite(irradianceWithBackground)) continue;
-
-    rows.push({
-      time: decimalYear - 1950,
-      irradiance: irradianceWithBackground
-    });
-  }
-
-  return sortRowsByTimeDesc(rows);
-}
-
-function averageIrradianceInRange(rows, startTime, endTime) {
-  return averageRowsInRange(rows, 'irradiance', startTime, endTime);
-}
-
-function boundaryWindowMean(rows, boundaryTime, windowYears, side) {
-  return boundaryWindowMeanForKey(rows, boundaryTime, windowYears, side, 'irradiance');
-}
-
-function calibrateLeanToLasp(leanRows, laspRows) {
-  return calibrateRowsToReferenceByBoundary(leanRows, laspRows, 'irradiance', 30);
-}
-
-function calibrateRowsToReference(sourceRows, referenceRows) {
-  return calibrateRowsToReferenceByBoundary(sourceRows, referenceRows, 'irradiance', 30);
-}
-
-function parseSteinhilber2012SolarRows(rawLines) {
-  const rows = [];
-  if (!rawLines || rawLines.length === 0) return rows;
-
-  const pmod1986Tsi = 1365.57;
-
-  for (let i = 0; i < rawLines.length; i++) {
-    const line = rawLines[i].trim();
-    if (line.length === 0) continue;
-
-    const tokens = line.split(/\s+/);
-    if (tokens.length < 7) continue;
-
-    const yearBp = parseFloat(tokens[0]);
-    const tsiAnomaly = parseFloat(tokens[5]);
-    if (!Number.isFinite(yearBp) || !Number.isFinite(tsiAnomaly)) continue;
-
-    rows.push({
-      time: -yearBp,
-      irradiance: pmod1986Tsi + tsiAnomaly
-    });
-  }
-
-  return sortRowsByTimeDesc(rows);
-}
-
 function median(values) {
   if (!values || values.length === 0) return null;
   const sorted = values.slice().sort((a, b) => a - b);
@@ -1498,200 +1643,11 @@ function median(values) {
   return sorted[mid];
 }
 
-function smoothSolarTable(sourceTable, applyDespike = true, applySmoothing = true) {
-  if (!sourceTable || sourceTable.getRowCount() < 3) return sourceTable;
-  if (!applyDespike && !applySmoothing) return sourceTable;
-
-  const rowCount = sourceTable.getRowCount();
-  const times = new Array(rowCount);
-  const values = new Array(rowCount);
-
-  for (let i = 0; i < rowCount; i++) {
-    const row = sourceTable.getRow(i);
-    times[i] = row.getNum('time');
-    values[i] = row.getNum('Solar Irradiance');
-  }
-
-  const processed = values.slice();
-
-  if (applyDespike) {
-    for (let i = 0; i < rowCount; i++) {
-      const local = [];
-      const start = max(0, i - SOLAR_DESPIKE_HAMPEL_RADIUS);
-      const end = min(rowCount - 1, i + SOLAR_DESPIKE_HAMPEL_RADIUS);
-
-      for (let j = start; j <= end; j++) {
-        if (Number.isFinite(values[j])) local.push(values[j]);
-      }
-
-      if (local.length < 5) continue;
-
-      const localMedian = median(local);
-      if (!Number.isFinite(localMedian)) continue;
-
-      const absoluteDeviations = new Array(local.length);
-      for (let k = 0; k < local.length; k++) {
-        absoluteDeviations[k] = abs(local[k] - localMedian);
-      }
-      const localMad = median(absoluteDeviations);
-      if (!Number.isFinite(localMad) || localMad <= 0) continue;
-
-      const sigma = SOLAR_DESPIKE_MAD_SCALE * localMad;
-      if (abs(values[i] - localMedian) > SOLAR_DESPIKE_SIGMA_THRESHOLD * sigma) {
-        processed[i] = localMedian;
-      }
-    }
-  }
-
-  const smoothed = processed.slice();
-
-  if (applySmoothing) {
-    let denseNewestTime = -Number.MAX_VALUE;
-    let denseOldestTime = Number.MAX_VALUE;
-
-    for (let i = 0; i < rowCount; i++) {
-      const prevDt = i > 0 ? abs(times[i - 1] - times[i]) : Number.POSITIVE_INFINITY;
-      const nextDt = i < rowCount - 1 ? abs(times[i] - times[i + 1]) : Number.POSITIVE_INFINITY;
-      const isDense = prevDt < SOLAR_DENSE_THRESHOLD_YEARS || nextDt < SOLAR_DENSE_THRESHOLD_YEARS;
-
-      if (isDense) {
-        if (times[i] > denseNewestTime) denseNewestTime = times[i];
-        if (times[i] < denseOldestTime) denseOldestTime = times[i];
-      }
-    }
-
-    const fallbackNewest = times[0];
-    const fallbackOldest = times[rowCount - 1];
-    if (!Number.isFinite(denseNewestTime) || !Number.isFinite(denseOldestTime)) {
-      denseNewestTime = fallbackNewest;
-      denseOldestTime = fallbackOldest;
-    }
-
-    const denseTimeSpan = max(0.000001, denseNewestTime - denseOldestTime);
-
-    for (let i = 0; i < rowCount; i++) {
-      const gradientAgeFraction = constrain((denseNewestTime - times[i]) / denseTimeSpan, 0, 1);
-      const ramp = pow(gradientAgeFraction, SOLAR_SMOOTHING_GRADIENT_EXPONENT);
-      const windowDays = lerp(SOLAR_SMOOTHING_WINDOW_DAYS_NEAR, SOLAR_SMOOTHING_WINDOW_DAYS_FAR, ramp);
-      const windowYears = windowDays / 365.2425;
-
-      let sum = 0;
-      let count = 0;
-      for (let j = 0; j < rowCount; j++) {
-        if (abs(times[j] - times[i]) <= windowYears) {
-          sum += processed[j];
-          count++;
-        }
-      }
-
-      if (count > 0) smoothed[i] = sum / count;
-    }
-  }
-
-  const outputTable = new p5.Table();
-  outputTable.addColumn('time');
-  outputTable.addColumn('Solar Irradiance');
-
-  for (let i = 0; i < rowCount; i++) {
-    const row = outputTable.addRow();
-    row.setNum('time', times[i]);
-    row.setNum('Solar Irradiance', smoothed[i]);
-  }
-
-  return outputTable;
-}
-
-function mergeSolarTableWithLaspTsisLeanAndSteinhilber(laspRawLines, tsisRawLines, leanRawLines, steinhilberRawLines, fallbackTable, applyCalibration = true) {
-  const mergedTable = new p5.Table();
-  mergedTable.addColumn('time');
-  mergedTable.addColumn('Solar Irradiance');
-
-  const laspRows = parseLaspDailySolarRows(laspRawLines);
-  const tsisRows = parseTsis24hrSolarRows(tsisRawLines);
-  const leanRowsUncalibrated = parseLean2000SolarRows(leanRawLines);
-  const leanRows = applyCalibration ? calibrateLeanToLasp(leanRowsUncalibrated, laspRows) : leanRowsUncalibrated;
-  const steinhilberRowsUncalibrated = parseSteinhilber2012SolarRows(steinhilberRawLines);
-  const steinhilberRows = applyCalibration ? calibrateRowsToReference(steinhilberRowsUncalibrated, leanRows) : steinhilberRowsUncalibrated;
-  const laspStartTime = laspRows.length > 0 ? laspRows[laspRows.length - 1].time : Number.POSITIVE_INFINITY;
-  const tsisStartTime = tsisRows.length > 0 ? tsisRows[tsisRows.length - 1].time : Number.POSITIVE_INFINITY;
-  const leanStartTime = leanRows.length > 0 ? leanRows[leanRows.length - 1].time : Number.POSITIVE_INFINITY;
-
-  for (let i = 0; i < tsisRows.length; i++) {
-    const row = mergedTable.addRow();
-    row.setNum('time', tsisRows[i].time);
-    row.setNum('Solar Irradiance', tsisRows[i].irradiance);
-  }
-
-  for (let i = 0; i < laspRows.length; i++) {
-    if (laspRows[i].time >= tsisStartTime) continue;
-
-    const row = mergedTable.addRow();
-    row.setNum('time', laspRows[i].time);
-    row.setNum('Solar Irradiance', laspRows[i].irradiance);
-  }
-
-  for (let i = 0; i < leanRows.length; i++) {
-    if (leanRows[i].time >= laspStartTime) continue;
-
-    const row = mergedTable.addRow();
-    row.setNum('time', leanRows[i].time);
-    row.setNum('Solar Irradiance', leanRows[i].irradiance);
-  }
-
-  for (let i = 0; i < steinhilberRows.length; i++) {
-    if (steinhilberRows[i].time >= leanStartTime) continue;
-
-    const row = mergedTable.addRow();
-    row.setNum('time', steinhilberRows[i].time);
-    row.setNum('Solar Irradiance', steinhilberRows[i].irradiance);
-  }
-
-  if (mergedTable.getRowCount() > 0) return mergedTable;
-  return fallbackTable;
-}
-
-function shouldUseCachedSolarProcessing() {
-  return solarCalibrationEnabled && solarDespikeEnabled && solarSmoothingEnabled;
-}
-
-function hasUsableSolarCache(table) {
-  return !!(table && table.getRowCount && table.getRowCount() > 0);
-}
-
-function buildSolarIrradianceDataset(fallbackTable) {
-  if (shouldUseCachedSolarProcessing() && hasUsableSolarCache(sourceTables.solarIrradianceProcessed)) {
-    return sourceTables.solarIrradianceProcessed;
-  }
-
-  const merged = mergeSolarTableWithLaspTsisLeanAndSteinhilber(
-    sourceTables.solarIrradianceRaw,
-    sourceTables.solarIrradianceTsisRaw,
-    sourceTables.solarIrradianceLeanRaw,
-    sourceTables.solarIrradianceSteinhilberRaw,
-    fallbackTable,
-    solarCalibrationEnabled
-  );
-
-  return smoothSolarTable(merged, solarDespikeEnabled, solarSmoothingEnabled);
-}
-
-function rebuildSolarIrradianceDataset() {
-  sourceTables.solarIrradiance = buildSolarIrradianceDataset(sourceTables.solarIrradiance);
-
-  for (let i = 0; i < data.length; i++) {
-    if (data[i].columnY === 'Solar Irradiance') {
-      data[i] = new Data(sourceTables.solarIrradiance, 'time', 'Solar Irradiance', 'W/m²', 1, color(255, 220, 0), 0, true);
-      break;
-    }
-  }
-
-  pScrollValue = -1;
-}
-
 function setup() {
   // Set window size and properties
   createCanvas(windowWidth, windowHeight);
-  currentYear = year() + 1;
+  currentYear = decimalYearFromYmd(year(), month(), day() + 1);
+  if (!Number.isFinite(currentYear)) currentYear = year();
   sourceTables.earthOrbit = buildEarthOrbitTableFromZeebe(sourceTables.zeebeOrbitalRaw, currentYear - 1950);
   sourceTables.volcanic = buildVolcanicSaodTable(sourceTables.volcanicSaodRaw, sourceTables.volcanic);
   sourceTables.population = buildPopulationTableFromLongRun(sourceTables.populationLongRunRaw, year());
@@ -1715,7 +1671,17 @@ function setup() {
   sourceTables.temperature = mergeTemperatureTableWithNeukom(sourceTables.temperature, sourceTables.neukomTempRaw);
   sourceTables.temperature = mergeTemperatureTableWithGiss(sourceTables.temperature, sourceTables.gissTempRaw);
   sourceTables.co2 = mergeCo2TableWithNoaaDaily(sourceTables.co2, sourceTables.co2DailyRaw, sourceTables.co2InSituRaw);
-  sourceTables.solarIrradiance = buildSolarIrradianceDataset(sourceTables.solarIrradiance);
+  sourceTables.solarIrradiance = buildTimeValueTable(
+    extractTimeValueRows(sourceTables.solarIrradiance, 'Solar Irradiance', 'irradiance'),
+    'irradiance',
+    'Solar Irradiance',
+    sourceTables.solarIrradiance
+  );
+  sourceTables.solarIrradiance = mergeSolarTableWithNnlAndTsis(
+    sourceTables.solarIrradiance,
+    sourceTables.solarIrradianceNnlRaw,
+    sourceTables.solarIrradianceTsisRaw
+  );
   sourceTables.sealevel = mergeSeaLevelTableWithColorado(
     sourceTables.sealevel,
     sourceTables.sealevelRaw,
@@ -1786,11 +1752,6 @@ function setup() {
   data.push(new Data(sourceTables.population, 'time', 'Population', 'people', 1, color(255, 128, 200), 0, true));
 
   maxData = data.length - 1; // Set maximum dataset count
-
-  refreshTemperatureWithRemoteGiss();
-  refreshCo2WithRemoteNoaaDaily();
-  refreshSealevelWithRemoteColorado();
-  refreshSolarWithRemoteTsis();
 }
 
 function draw() {
@@ -1995,18 +1956,46 @@ function keyPressed() {
   if (key === '9') scrollValue = 14000000000;
   if (key === 'p' || key === 'P') perfHUD = !perfHUD;
   if (key === 'C' || key === 'c' || key === ' ') showCursor = !showCursor;
-  if (key === 'K' || key === 'k') {
-    solarCalibrationEnabled = !solarCalibrationEnabled;
-    rebuildSolarIrradianceDataset();
+  if (key === 'V' || key === 'v') showDataSourceTooltip = !showDataSourceTooltip;
+  if (key === 'R' || key === 'r') {
+    refreshAllRemoteSeries();
   }
-  if (key === 'H' || key === 'h') {
-    solarDespikeEnabled = !solarDespikeEnabled;
-    rebuildSolarIrradianceDataset();
+}
+
+function sourceLabelForDataPoint(columnY, timeValue) {
+  if (columnY === 'Solar Irradiance') {
+    if (Number.isFinite(solarTsisNewestTime) && Number.isFinite(solarTsisOldestTime)
+      && timeValue <= solarTsisNewestTime && timeValue >= solarTsisOldestTime) {
+      return `TSIS 24hr (${solarRefreshSource})`;
+    }
+    if (Number.isFinite(solarNnlNewestTime) && Number.isFinite(solarNnlOldestTime)
+      && timeValue <= solarNnlNewestTime && timeValue >= solarNnlOldestTime) {
+      return 'NRLTSI/NNL P1D';
+    }
+    return 'SATIRE-M 14C fc';
   }
-  if (key === 'J' || key === 'j') {
-    solarSmoothingEnabled = !solarSmoothingEnabled;
-    rebuildSolarIrradianceDataset();
+
+  if (columnY === 'Temperature') {
+    if (timeValue >= -70) return `NASA GISS (${gissRefreshSource})`;
+    if (timeValue >= -1949) return 'PAGES2k Neukom';
+    if (timeValue >= -800000) return 'EPICA Dome C';
+    return 'Hansen et al.';
   }
+
+  if (columnY === 'CO2') {
+    if (timeValue >= 8) return `NOAA/Scripps (${co2RefreshSource})`;
+    if (timeValue >= -800000) return 'Antarctica composite';
+    return 'Deep-time composite (Rae/Tripati)';
+  }
+
+  if (columnY === 'Sealevel') {
+    return `Composite (${sealevelRefreshSource})`;
+  }
+
+  if (columnY === 'Volcanic Activity') return 'eVolv2k + HolVol (SAOD)';
+  if (columnY === 'Eccentricity') return 'Zeebe 2019 orbital';
+  if (columnY === 'Population') return 'OWID long-run world population';
+  return '';
 }
 
 function mousePressed() {
@@ -2238,6 +2227,9 @@ class Data {
           if (pointX <= mouseX + shift && prevPointX > mouseX + shift) {
             const valueText = this.formatTooltipValue(this.dataY[i]);
             const mouseData = this.unit && this.unit.length > 0 ? valueText + ' ' + this.unit : valueText;
+            const sourceLabel = showDataSourceTooltip ? sourceLabelForDataPoint(this.columnY, this.dataX[i]) : '';
+            const sourceLine = sourceLabel.length > 0 ? 'Source: ' + sourceLabel : '';
+            const tooltipWidth = sourceLine.length > 0 ? max(textWidth(mouseData), textWidth(sourceLine)) : textWidth(mouseData);
             this.dataDist = abs(mouseY - (y + this.dataY[i] * h));
 
             // Draw tooltip if cursor is enabled and in data area
@@ -2247,18 +2239,29 @@ class Data {
               rectMode(CORNER);
 
               // Position tooltip box to avoid screen edge
-              if (mouseX + shift < width - textWidth(mouseData)) {
+              const tooltipHeight = sourceLine.length > 0
+                ? (2 * height / TIMELINE_HEIGHT_DIVISOR_SMALL)
+                : (height / TIMELINE_HEIGHT_DIVISOR_SMALL);
+              if (mouseX + shift < width - tooltipWidth) {
                 fill(0, 32, 64, BACKGROUND_ALPHA_HIGH);
-                rect(mouseX + shift, y + this.dataY[i] * h - 5, textWidth(mouseData) + 5, -height / TIMELINE_HEIGHT_DIVISOR_SMALL);
+                rect(mouseX + shift, y + this.dataY[i] * h - 5, tooltipWidth + 5, -tooltipHeight);
                 textAlign(LEFT, BASELINE);
                 fill(this.c);
                 text(mouseData + ' ', mouseX + shift, y + this.dataY[i] * h - 10);
-              } else if (mouseX + shift >= width - textWidth(mouseData)) {
+                if (sourceLine.length > 0) {
+                  fill(220);
+                  text(sourceLine, mouseX + shift, y + this.dataY[i] * h - 10 - (height / TIMELINE_HEIGHT_DIVISOR_SMALL));
+                }
+              } else if (mouseX + shift >= width - tooltipWidth) {
                 fill(0, 32, 64, BACKGROUND_ALPHA_HIGH);
-                rect(mouseX + shift, y + this.dataY[i] * h - 5, -textWidth(mouseData) + 5, -height / TIMELINE_HEIGHT_DIVISOR_SMALL);
+                rect(mouseX + shift, y + this.dataY[i] * h - 5, -tooltipWidth + 5, -tooltipHeight);
                 textAlign(RIGHT, BASELINE);
                 fill(this.c);
                 text(mouseData, mouseX + shift, y + this.dataY[i] * h - 10);
+                if (sourceLine.length > 0) {
+                  fill(220);
+                  text(sourceLine, mouseX + shift, y + this.dataY[i] * h - 10 - (height / TIMELINE_HEIGHT_DIVISOR_SMALL));
+                }
               }
             }
 
