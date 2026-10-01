@@ -11,6 +11,8 @@ Notes
 - The bottom panel combines global temperature estimates using constant reference offsets only. Source changes are marked and disconnected. See the temperature combination method below.
 - All identifiable component changes in the top composites have dashed markers and disconnected lines. Published provider composites retain their values; the markers explain their provenance.
 - Sea level uses one view with explicitly separated geological, tide-gauge and satellite segments. Local relative sea-level samples are not treated as a global reconstruction.
+- Tooltips always show sample sources. The browser loads bundled snapshots; observation downloads and validation run in the GitHub updater, rather than through browser refresh shortcuts or proxy services.
+- Autoscaling includes visible samples, drawn uncertainty bounds and a continuous line or band's intersection with the viewport's left edge. It does not use the whole off-screen endpoint or interpolate across source joins, point-only samples or declared data gaps. This affects the display range, not the stored observations.
 
 ## Orbital
 
@@ -174,7 +176,7 @@ These offsets are an **application alignment**, not an author-validated homogene
 
 For views spanning more than **200 years**, the panel shows **annual means**, matching the older annual record's temporal resolution. Each year's available raw daily values are averaged separately within each retained source; the 50-day-smoothed values are not averaged again. Missing days are not filled. Partial years and short source fragments are labelled, include their sample count and coverage dates in the tooltip, and sit at the midpoint of actual coverage. An annual mean from incomplete observations can have sampling bias. Source joins remain disconnected. Older published annual values and their timestamps are unchanged.
 
-For narrower views, the original daily sample dates return with the existing centered 50-day arithmetic mean from 1850 onward. Endpoint windows are shorter and no window blends sources. The panel caption always identifies its averaging. TSIS gaps longer than seven days break the detailed line; annual means only break for missing years or source changes. Both representations are rebuilt from the immutable PMIP4 base and accumulated raw TSIS observations, so identical refreshes remain identical and partial downloads retain local data.
+For narrower views, the original daily sample dates return with the existing centered 50-day arithmetic mean from 1850 onward. Endpoint windows are shorter and no window blends sources. Tooltips identify the averaging period. TSIS gaps longer than seven days break the detailed line; annual means only break for missing years or source changes. Both representations are rebuilt on page load from the bundled PMIP4 base and raw TSIS observations; identical snapshots produce identical results. TSIS snapshot updates are validated by the GitHub updater.
 
 Alternatives reviewed: the final CMIP7 historical solar forcing v4.6 covers 1850–2023 and uses an NNL-based reference reconstruction (https://www.solarisheppa.kit.edu/75.php; https://doi.org/10.5194/gmd-17-1217-2024). Updated SATIRE-S (since 1974) is available from the model authors (https://doi.org/10.1051/0004-6361/202554044; author data page above). Neither alone provides the full 9,000-year context; both would still need a documented historical join. CMIP7 scenario files include future simulated solar activity and must not be treated as recent observations. This review keeps the current source snapshots and improves their combination and presentation.
 
@@ -203,7 +205,7 @@ Alternatives reviewed: the final CMIP7 historical solar forcing v4.6 covers 1850
     - https://sealevel.colorado.edu/files/2026_rel2/gmsl_2026rel2_seasons_retained.txt
     - https://sealevel.colorado.edu/data/2026rel2-0
   - Downloaded and checked: 2026-10-01. SHA-256: `862cd6728dba3751724250ed45d3b62bcfa2552fbc2ae605bf7d90f4b0472136`.
-  - Runtime use: decimal year and global mean sea-level variation in mm (columns 1–2), converted to metres. The seasons-retained product is used consistently for the local snapshot and remote refresh. Its arbitrary reference is replaced by a constant offset estimated against the rebased tide-gauge reconstruction.
+  - Runtime use: decimal year and global mean sea-level variation in mm (columns 1–2), converted to metres. The browser and GitHub updater use the same seasons-retained product. Its arbitrary reference is replaced by a constant offset estimated against the rebased tide-gauge reconstruction.
   - Release 2 extends the observations through mid-2026 and retains the same units, seasonal convention and GIA-removed header. The older release-1 file stays on disk as a previous snapshot and is excluded from runtime. The scheduled updater checks https://sealevel.colorado.edu/data for newer release labels and reports them in the Actions log; changing releases requires checking the matching product and updating the manifest and browser source together.
 
 ### Sea-level combination method and limitations
@@ -223,3 +225,4 @@ The Kopp archive contains local coastal samples, not the published global poster
   - Source: https://ourworldindata.org/grapher/population-long-run-with-projections.csv
   - Runtime use: only `World` / `OWID_WRL`. Prefer the historical `Population` column when supplied; use the projection column otherwise. The bundled historical series ends in 2023; 2024 onward are projections, labelled in tooltips and drawn as dashed lines. Years beyond the current calendar year are excluded.
   - Historical values are already a provider composite and remain unchanged. This CSV has no per-row provenance for the historical component estimates; internal source transitions are not inferred or given invented markers. Population estimates and projections have uncertainty that is not supplied in this file.
+  - Lines connect annual samples only within each historical or projection segment. Their visible intersection at the left edge contributes to vertical scaling; no extra daily estimates or extension past the latest sample are added. Population is not part of the automatic observation updater.

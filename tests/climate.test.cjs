@@ -137,22 +137,6 @@ test('rendering preserves both sides of every source join and leaves it disconne
   assert.ok(result.every(join => join.retained && !join.connected));
 });
 
-test('a temperature refresh rebases GISS while preserving all paleo samples and provenance', async () => {
-  const before = run('JSON.stringify(sourceTables.temperature.temperatureRows.filter(row => row.source !== "giss"))');
-  const newest = run('sourceTables.gissTemperature.getRow(0).getNum("time")');
-  const year = Math.floor(newest + 1950);
-  const month = Math.round((newest - Math.floor(newest)) * 12);
-  const monthly = Array(12).fill('****');
-  monthly[month] = '150';
-  context.fetch = async () => ({ ok: true, text: async () => `${year} ${monthly.join(' ')}` });
-  await run('refreshTemperatureWithRemoteGiss()');
-  delete context.fetch;
-  assert.equal(run('JSON.stringify(sourceTables.temperature.temperatureRows.filter(row => row.source !== "giss"))'), before);
-  assert.ok(Math.abs(run('data[0].dataY[0]') - (1.5 - run('temperatureCalibration.gissOffset'))) < 1e-12);
-  assert.equal(run('data[0].temperatureRows[0].source'), 'giss');
-  assert.equal(run('data[0].yScrolling'), true);
-});
-
 test('one global sea-level view includes geological and modern records without local coastal samples', () => {
   const result = run(`({ sources: [...new Set(data[5].seriesRows.map(row => row.source))],
     oldest: data[5].minX, maximum: data[5].maxY,
@@ -341,53 +325,11 @@ test('volcanic values retain the published annual product and correct component 
   assert.equal(run('data[4].dataY[0]'), Number(fs.readFileSync('data/volcanic/SAOD_merged_HolVol-v1_eVolv2k_v3_CMIP6_v3_-9500_to_2014_global_mean.csv','utf8').trim().split(/\r?\n/).at(-1).split(',')[1]));
 });
 
-test('partial sea-level refresh keeps older values, calibration and source metadata', async () => {
-  const before = run('JSON.stringify(data[5].seriesRows.slice(1))');
-  const latest = run('data[5].dataX[0]');
-  context.fetch = async () => ({ok:true, text:async()=>`${latest+1950} 120`});
-  await run('refreshSealevelWithRemoteColorado()');
-  delete context.fetch;
-  assert.equal(run('JSON.stringify(data[5].seriesRows.slice(1))'), before);
-  assert.ok(Math.abs(run('data[5].dataY[0]') - (0.120+run('seaLevelCalibration.satelliteOffset'))) < 1e-12);
-  assert.equal(run('data[5].seriesRows[0].source'), 'sea-satellite');
-});
-
-test('partial remote responses preserve unmatched local measurements', () => {
+test('rebuilding solar data from the bundled observations is deterministic', () => {
   const result = run(`(() => {
-    const table = buildTimeValueTable([
-      { time: 76, co2: 426 }, { time: 75, co2: 424 },
-      { time: 70, co2: 415 }, { time: 50, co2: 390 }
-    ], 'co2', 'CO2');
-    return parseCo2TableRows(mergeRecentCo2Rows(table, [{ time: 76, co2: 427 }], 15));
-  })()`);
-  assert.deepEqual([...result.map((row) => row.co2)], [427, 424, 415, 390]);
-  const staleResult = run(`(() => {
-    const table = buildTimeValueTable([
-      { time: 76, co2: 426 }, { time: 75, co2: 424 }
-    ], 'co2', 'CO2');
-    return parseCo2TableRows(mergeRecentCo2Rows(table, [{ time: 75, co2: 410 }], 15));
-  })()`);
-  assert.deepEqual([...staleResult.map((row) => row.co2)], [426, 424]);
-});
-
-test('modern CO2 refresh preserves historical samples and reconstruction uncertainty', async () => {
-  const before = run('JSON.stringify(data[1].seriesRows.filter(row=>row.source!=="co2-noaa"))');
-  const newest = run('data[1].seriesRows[0]');
-  const date = newest.sampleDate.split('-').map(Number);
-  context.fetch = async () => ({ok:true, text:async()=>`${date.join(' ')} ${newest.time+1950} 431.25`});
-  await run('refreshCo2WithRemoteNoaaDaily()');
-  delete context.fetch;
-  assert.equal(run('JSON.stringify(data[1].seriesRows.filter(row=>row.source!=="co2-noaa"))'), before);
-  assert.equal(run('data[1].seriesRows[0].co2'), 431.25);
-  assert.equal(run('data[1].seriesRows[0].sampleDate'), newest.sampleDate);
-});
-
-test('identical solar refreshes produce identical data from the raw base', () => {
-  const result = run(`(() => {
-    const remote = parseTsisSolarRows(sourceTables.solarIrradianceTsisRaw);
     const build = () => parseSolarIrradianceTableRows(mergeSolarTableWithNnlAndTsis(
       sourceTables.solarBase, sourceTables.solarIrradianceNnlRaw,
-      sourceTables.solarIrradianceTsisRaw, remote
+      sourceTables.solarIrradianceTsisRaw
     ));
     const first = build();
     const second = build();
@@ -396,19 +338,6 @@ test('identical solar refreshes produce identical data from the raw base', () =>
   })()`);
   assert.ok(result.count > 70000);
   assert.equal(result.equal, true);
-});
-
-test('partial solar downloads retain local TSIS observations', () => {
-  const result = run(`(() => {
-    const local = parseTsisSolarRows(sourceTables.solarIrradianceTsisRaw);
-    const updated = mergeTsisObservations(local, [{ time: local[0].time, irradiance: 1361.5 }]);
-    return { count: updated.length, originalCount: local.length,
-      latest: updated[0].irradiance, older: updated[1].irradiance,
-      originalOlder: local[1].irradiance };
-  })()`);
-  assert.equal(result.count, result.originalCount);
-  assert.equal(result.latest, 1361.5);
-  assert.equal(result.older, result.originalOlder);
 });
 
 test('solar timestamps use the documented epochs, missing zeros are omitted, and provisional readings retained', () => {
@@ -533,20 +462,6 @@ test('solar smoothing keeps the observed TSIS scale and never blends source boun
   assert.equal(result.separated, true);
 });
 
-test('successive partial solar downloads preserve previously fetched observations', async () => {
-  const original = run('sourceTables.solarTsisRows.length');
-  const newest = run('sourceTables.solarTsisRows[0].time');
-  const jd = run(`millisecondsFromDecimalYear(${newest}+1950)/86400000+2440587.5`);
-  context.fetch = async () => ({ok:true, text:async()=>`${jd+1} 1362`});
-  await run('refreshSolarWithRemoteTsis()');
-  context.fetch = async () => ({ok:true, text:async()=>`${jd} 1361`});
-  await run('refreshSolarWithRemoteTsis()');
-  delete context.fetch;
-  assert.equal(run('sourceTables.solarTsisRows.length'), original+1);
-  assert.ok(run('sourceTables.solarTsisRows[0].time') > newest);
-  assert.equal(run('sourceTables.solarTsisRows[0].irradiance'), 1362);
-});
-
 test('keyboard zoom stays positive and draw returns', () => {
   run("setZoom(25); key = 'd'; keyCode = 0; for (let i = 0; i < 100; i++) keyPressed()");
   assert.equal(run('scrollValue'), 1);
@@ -573,7 +488,7 @@ test('pixel thinning retains the visible volcanic maximum', () => {
   assert.equal(result.plottedMaximum, result.rawMaximum);
 });
 
-test('top buttons change only the comparison and temperature fits visible data by default', () => {
+test('top buttons change only the comparison and temperature always fits visible data', () => {
   const buttonLabels = [];
   const originalText = context.text;
   context.text = value => buttonLabels.push(value);
@@ -591,15 +506,15 @@ test('top buttons change only the comparison and temperature fits visible data b
   run('setZoom(70000000); draw()');
   const fullBounds = run('[data[0].localMinY, data[0].localMaxY]');
   assert.ok(fullBounds[1] - fullBounds[0] > recentBounds[1] - recentBounds[0]);
-  run('toggleTemperatureScale(); setZoom(25); draw()');
-  assert.equal(run('data[0].yScrolling'), false);
-  assert.deepEqual([...run('[data[0].localMinY, data[0].localMaxY]')], [...fullBounds]);
-  run('toggleTemperatureScale(); draw()');
+  run("key = 'Y'; keyPressed(); setZoom(25); draw()");
+  assert.equal(run('data[0].yScrolling'), true);
   assert.deepEqual([...run('[data[0].localMinY, data[0].localMaxY]')], [...recentBounds]);
+  run('mouseButton = LEFT; mouseX = width - 10; mouseY = data[0].rectY + 25; mousePressed(); draw()');
+  assert.equal(run('data[0].yScrolling'), true);
   run('mouseY = 0; mouseX = 0; selectComparison(1)');
 });
 
-test('an off-screen extreme does not set the visible vertical scale', () => {
+test('autoscaling uses the visible line intersection rather than an off-screen extreme', () => {
   const bounds = run(`(() => {
     setZoom(25); oneYear = -1000 / scrollValue;
     const bp = currentYear - 1950;
@@ -612,7 +527,89 @@ test('an off-screen extreme does not set the visible vertical scale', () => {
     series.draw();
     return [series.localMinY, series.localMaxY];
   })()`);
-  assert.deepEqual([...bounds], [2, 4]);
+  assert.equal(bounds[0], 2);
+  const expectedAtLeftEdge = 4 + ((1265 / 40 - 2) / 98) * (1000 - 4);
+  assert.ok(Math.abs(bounds[1] - expectedAtLeftEdge) < 1e-9);
+  assert.ok(bounds[1] < 1000);
+});
+
+test('population lines reach the left edge without being clipped below the panel', () => {
+  const saved = {line:context.line,clip:context.drawingContext.clip,restore:context.drawingContext.restore,width:context.width};
+  const lines = [];
+  let clipped = false;
+  context.line = (x1,y1,x2,y2) => { if (clipped) lines.push({x1,y1,x2,y2}); };
+  context.drawingContext.clip = () => { clipped = true; };
+  context.drawingContext.restore = () => { clipped = false; };
+  try {
+    for (const [viewportWidth,zoom] of [[1280,1],[1280,2],[1280,10],[375,3]]) {
+      context.width = viewportWidth;
+      lines.length = 0;
+      const panel = run(`(() => {
+        setZoom(${zoom}); oneYear = -1000/scrollValue;
+        const series = data[6]; series.draw();
+        return {top:series.rectY,bottom:series.rectY+series.rectH,samples:series.dataX.length};
+      })()`);
+      const crossing = lines.find(line => Math.min(line.x1,line.x2) <= 15 && Math.max(line.x1,line.x2) >= 15);
+      assert.ok(crossing, `line reaches left edge at width ${viewportWidth}, zoom ${zoom}`);
+      const edgeY = crossing.y1 + (15-crossing.x1)/(crossing.x2-crossing.x1)*(crossing.y2-crossing.y1);
+      assert.ok(edgeY >= panel.top-1e-6 && edgeY <= panel.bottom+1e-6, 'visible edge is inside vertical clip');
+      assert.equal(panel.samples, run('sourceTables.population.getRowCount()'), 'no observations are added');
+    }
+    context.width = 375;
+    lines.length = 0;
+    run('setZoom(1); oneYear = -1000/scrollValue; data[6].draw()');
+    assert.equal(run('data[6].visiblePointCount()'), 0);
+    assert.equal(lines.length, 0, 'annual values are not extended beyond their newest timestamp');
+  } finally {
+    context.width = saved.width;
+    context.line = saved.line;
+    Object.assign(context.drawingContext,{clip:saved.clip,restore:saved.restore});
+  }
+});
+
+test('edge scaling preserves source joins, point-only samples and actual data gaps', () => {
+  for (const olderMetadata of ["source:'older'", "source:'recent',mode:'points'", "source:'recent',maxGapYears:1"]) {
+    const bounds = run(`(() => {
+      setZoom(25); oneYear=-1000/scrollValue; const bp=currentYear-1950;
+      const rows=[{time:bp-1,co2:2,source:'recent'}, {time:bp-2,co2:4,source:'recent'},
+        {time:bp-100,co2:1000,${olderMetadata}}];
+      const series=new Data(buildTimeValueTable(rows,'co2','CO2'),'time','CO2','ppm',1,0,0,true);
+      series.draw(); return [series.localMinY,series.localMaxY];
+    })()`);
+    assert.deepEqual([...bounds],[2,4]);
+  }
+});
+
+test('a continuous uncertainty band contributes only its bounds at the visible edge', () => {
+  const result = run(`(() => {
+    setZoom(1); oneYear=-1000; const bp=currentYear-1950;
+    const rows=[{time:bp-1,co2:300,lower:250,upper:350,band:true,source:'co2-cencopip'},
+      {time:bp-2,co2:200,lower:150,upper:250,band:true,source:'co2-cencopip'}];
+    const series=new Data(buildTimeValueTable(rows,'co2','CO2'),'time','CO2','ppm',1,0,0,true);
+    series.draw(); return {lower:series.localMinY,upper:series.localMaxY};
+  })()`);
+  assert.ok(Math.abs(result.lower - (250-0.265*100)) < 1e-9);
+  assert.equal(result.upper,350);
+});
+
+test('tooltips always identify single-source datasets and retired shortcuts do nothing', () => {
+  const labels = [];
+  const originalText = context.text;
+  context.text = value => labels.push(String(value));
+  try {
+    run(`setZoom(100); oneYear=-10;
+      const series=data[2]; mouseX=width-oneYear*(series.dataX[0]-series.BP)-shift;
+      mouseY=200; series.draw();`);
+    assert.ok(labels.some(label=>label.includes('Source: Zeebe 2019 ZB18a')));
+    const before = run('({zoom:scrollValue,cursor:showCursor,comparison:selectedData})');
+    context.fetch = () => { throw new Error('Retired shortcuts must not request data'); };
+    run("for (const pressedKey of ['v','V','r','R']) { key=pressedKey; keyPressed(); }");
+    assert.deepEqual(run('({zoom:scrollValue,cursor:showCursor,comparison:selectedData})'),before);
+  } finally {
+    context.text=originalText;
+    delete context.fetch;
+    run('mouseX=0;mouseY=0');
+  }
 });
 
 test('a drawn uncertainty band fits the visible scale without using off-screen bounds', () => {

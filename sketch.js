@@ -27,38 +27,6 @@ const SOLAR_ALIGNMENT_MIN_DAYS = 15;
 const SOLAR_ALIGNMENT_MIN_MONTHS = 12;
 const ORBITAL_EPOCH_CE = 2000; // ZB18a uses J2000; see Kocken & Zeebe (2026), section 2.1.
 
-const GISS_REMOTE_UPDATE_ENABLED = true;
-const GISS_REMOTE_UPDATE_WINDOW_YEARS = 15;
-const GISS_REMOTE_URL = 'https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.txt';
-const GISS_REMOTE_URL_CANDIDATES = [
-  GISS_REMOTE_URL,
-  'https://corsproxy.io/?https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.txt',
-  'https://r.jina.ai/http://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.txt'
-];
-const CO2_REMOTE_UPDATE_ENABLED = true;
-const CO2_REMOTE_UPDATE_WINDOW_YEARS = 15;
-const CO2_REMOTE_DAILY_URL = 'https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_daily_mlo.txt';
-const CO2_REMOTE_DAILY_URL_CANDIDATES = [
-  CO2_REMOTE_DAILY_URL,
-  'https://corsproxy.io/?https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_daily_mlo.txt',
-  'https://r.jina.ai/http://gml.noaa.gov/webdata/ccgg/trends/co2/co2_daily_mlo.txt'
-];
-const SEALEVEL_REMOTE_UPDATE_ENABLED = true;
-const SEALEVEL_REMOTE_UPDATE_WINDOW_YEARS = 20;
-const SEALEVEL_REMOTE_URL = 'https://sealevel.colorado.edu/files/2026_rel2/gmsl_2026rel2_seasons_retained.txt';
-const SEALEVEL_REMOTE_URL_CANDIDATES = [
-  SEALEVEL_REMOTE_URL,
-  'https://corsproxy.io/?https://sealevel.colorado.edu/files/2026_rel2/gmsl_2026rel2_seasons_retained.txt',
-  'https://r.jina.ai/http://sealevel.colorado.edu/files/2026_rel2/gmsl_2026rel2_seasons_retained.txt'
-];
-const SOLAR_REMOTE_UPDATE_ENABLED = true;
-const SOLAR_REMOTE_TSIS_URL = 'https://lasp.colorado.edu/lisird/latis/dap/tsis_tsi_24hr.txt';
-const SOLAR_REMOTE_TSIS_URL_CANDIDATES = [
-  SOLAR_REMOTE_TSIS_URL,
-  'https://corsproxy.io/?https://lasp.colorado.edu/lisird/latis/dap/tsis_tsi_24hr.txt',
-  'https://r.jina.ai/http://lasp.colorado.edu/lisird/latis/dap/tsis_tsi_24hr.txt'
-];
-
 const SOURCE_INFO = {
   giss: { short: 'GISS', label: 'NASA GISS • monthly observations', cadence: 'month' },
   pages: { short: 'PAGES2k', label: 'PAGES2k • annual April–March reconstruction', cadence: 'year' },
@@ -114,9 +82,7 @@ let scrollSpeed = 1;                  // Current scroll speed
 let currentYear = 0;                  // Right-edge timeline anchor (current year plus small buffer)
 let shift = SHIFT_OFFSET;             // Left margin shift
 let showCursor = true;                // Crosshair/tooltip visibility toggle
-let showDataSourceTooltip = false;    // Optional tooltip source label toggle
 let selectedData = 1;                 // Upper series index
-let temperatureAutoScale = true;      // Fit the visible temperature values by default
 let temperatureCalibration = {};
 let seaLevelCalibration = {};
 let solarCalibration = {};
@@ -127,15 +93,6 @@ let perfEventsDrawn = 0;
 let perfEventsCulled = 0;
 let perfTimelineTicks = 0;
 let perfTimelineLabels = 0;
-let gissRefreshStatus = 'local';
-let gissRefreshSource = 'local file';
-let co2RefreshStatus = 'local';
-let co2RefreshSource = 'local file';
-let sealevelRefreshStatus = 'local';
-let sealevelRefreshSource = 'local file';
-let solarRefreshStatus = 'local';
-let solarRefreshSource = 'local file';
-
 function preload() {
   // Orbital
   sourceTables.zeebeOrbitalRaw = loadStrings('data/orbit/zeebe2019orbital.txt'); // 100–0 Ma; draw only 58–0 Ma
@@ -423,14 +380,6 @@ function parseHansenTemperatureRows(rawLines) {
   return sortRowsByTimeDesc(rows);
 }
 
-function parseTemperatureTableRows(table) {
-  return extractTimeValueRows(table, 'Temperature', 'temperature');
-}
-
-// All offsets change the reference level only. They never change variability.
-// Hansen's published absolute scale assigns 14 °C to 1961–1990.
-// Osman is aligned over eight complete 200-year bins (150–1750 CE),
-// comparing each bin with the same years of PAGES2k before averaging.
 function buildCombinedTemperatureTable(gissRows, pagesRows, osmanRows, hansenRows) {
   const gissReference = gissRows.filter(row => row.time >= 11 && row.time < 41);
   if (gissReference.length !== 360) throw new Error('GISS requires all 360 months of the 1961–1990 reference period');
@@ -463,221 +412,6 @@ function buildCombinedTemperatureTable(gissRows, pagesRows, osmanRows, hansenRow
   const table = buildTimeValueTable(rows, 'temperature', 'Temperature');
   table.temperatureRows = rows; // Keep provenance and uncertainty with each plotted sample.
   return table;
-}
-
-function rebuildCombinedTemperature() {
-  sourceTables.temperature = buildCombinedTemperatureTable(
-    parseTemperatureTableRows(sourceTables.gissTemperature),
-    parseNeukomTemperatureRows(sourceTables.neukomTempRaw),
-    parseOsmanTemperatureRows(sourceTables.osmanTempRaw),
-    parseHansenTemperatureRows(sourceTables.hansenTempRaw)
-  );
-}
-
-function mergeRecentTemperatureRows(baseTable, remoteRows, recentWindowYears) {
-  return mergeRecentRowsByWindow(
-    baseTable,
-    remoteRows,
-    recentWindowYears,
-    (table) => parseTemperatureTableRows(table),
-    'temperature',
-    'Temperature'
-  );
-}
-
-function mergeRecentRowsByWindow(baseTable, remoteRows, recentWindowYears, extractRowsFn, valueKey, valueColumn) {
-  if (!baseTable || !remoteRows || remoteRows.length === 0) return baseTable;
-
-  const baseRows = extractRowsFn(baseTable);
-  if (baseRows.length === 0) return baseTable;
-
-  const newestBaseTime = baseRows[0].time;
-  // A stale download must not roll back the observations already bundled locally.
-  const newestRemoteTime = remoteRows.reduce((newest, row) => max(newest, row.time), Number.NEGATIVE_INFINITY);
-  if (newestRemoteTime < newestBaseTime - 0.25) return baseTable;
-  const cutoffTime = newestBaseTime - recentWindowYears;
-  // Replace matching timestamps, retaining local observations absent from a
-  // partial remote response. Rounding absorbs harmless date-format differences.
-  const timeKey = (time) => Math.round(time * 10000);
-  // Historical proxy compilations can contain several estimates at the same
-  // age. A modern refresh must preserve all of them, rather than deduplicating
-  // the entire composite by timestamp.
-  const historical = baseRows.filter(row => row.time < cutoffTime);
-  const byTime = new Map(baseRows.filter(row => row.time >= cutoffTime).map((row) => [timeKey(row.time), row]));
-  for (const row of remoteRows) {
-    if (!Number.isFinite(row.time) || !Number.isFinite(row[valueKey]) || row.time < cutoffTime) continue;
-    byTime.set(timeKey(row.time), { ...byTime.get(timeKey(row.time)), ...row });
-  }
-  const mergedRows = sortRowsByTimeDesc([...byTime.values(), ...historical]);
-  return buildTimeValueTable(mergedRows, valueKey, valueColumn, baseTable);
-}
-
-function updateDataset(columnY, table) {
-  const index = data.findIndex((series) => series.columnY === columnY);
-  if (index < 0) return;
-  const old = data[index];
-  const updated = new Data(table, old.columnX, old.columnY, old.unit,
-    old.position, old.c, old.type, old.yScrolling, old.displayName);
-  updated.rectY = old.rectY;
-  data[index] = updated;
-  redrawRequested = true;
-}
-
-function mergeRecentCo2Rows(baseTable, remoteRows, recentWindowYears) {
-  return mergeRecentRowsByWindow(
-    baseTable,
-    remoteRows,
-    recentWindowYears,
-    (table) => parseCo2TableRows(table),
-    'co2',
-    'CO2'
-  );
-}
-
-function mergeRecentSealevelRows(baseTable, remoteRows, recentWindowYears) {
-  return mergeRecentRowsByWindow(
-    baseTable,
-    remoteRows,
-    recentWindowYears,
-    (table) => parseSeaLevelTableRows(table),
-    'sealevel',
-    'Sealevel'
-  );
-}
-
-function sourceLabelFromUrl(url) {
-  try {
-    const parsed = new URL(url);
-    return parsed.hostname;
-  } catch (error) {
-    return url;
-  }
-}
-
-async function refreshSeriesFromRemote(options) {
-  if (!options.enabled) return;
-  if (typeof fetch !== 'function') return;
-
-  options.setStatus('refreshing');
-  options.setSource('remote');
-  let lastError = null;
-
-  for (let i = 0; i < options.urlCandidates.length; i++) {
-    const candidateUrl = options.urlCandidates[i];
-
-    try {
-      const response = await fetch(candidateUrl, { cache: 'no-store' });
-      if (!response.ok) throw new Error('HTTP ' + response.status);
-
-      const rawText = await response.text();
-      const remoteRows = options.parseRows(rawText);
-      if (!remoteRows || remoteRows.length === 0) throw new Error('No parseable rows');
-
-      options.applyRows(remoteRows);
-      options.setStatus('remote-ok');
-      options.setSource(sourceLabelFromUrl(candidateUrl));
-      return;
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  options.setStatus('local-fallback');
-  options.setSource('local file');
-  console.warn(options.warnLabel + ' failed; using local fallback.', lastError);
-}
-
-async function refreshTemperatureWithRemoteGiss() {
-  await refreshSeriesFromRemote({
-    enabled: GISS_REMOTE_UPDATE_ENABLED,
-    urlCandidates: GISS_REMOTE_URL_CANDIDATES,
-    parseRows: (rawText) => parseGissTemperatureRows(rawText.split(/\r?\n/)),
-    applyRows: (remoteRows) => {
-      sourceTables.gissTemperature = mergeRecentTemperatureRows(
-        sourceTables.gissTemperature,
-        remoteRows,
-        GISS_REMOTE_UPDATE_WINDOW_YEARS
-      );
-
-      rebuildCombinedTemperature();
-      updateDataset('Temperature', sourceTables.temperature);
-    },
-    setStatus: (status) => { gissRefreshStatus = status; },
-    setSource: (source) => { gissRefreshSource = source; },
-    warnLabel: 'Remote GISS refresh'
-  });
-}
-
-async function refreshCo2WithRemoteNoaaDaily() {
-  await refreshSeriesFromRemote({
-    enabled: CO2_REMOTE_UPDATE_ENABLED,
-    urlCandidates: CO2_REMOTE_DAILY_URL_CANDIDATES,
-    parseRows: (rawText) => parseNoaaDailyCo2Rows(rawText.split(/\r?\n/)),
-    applyRows: (remoteRows) => {
-      sourceTables.co2 = mergeRecentCo2Rows(
-        sourceTables.co2,
-        remoteRows,
-        CO2_REMOTE_UPDATE_WINDOW_YEARS
-      );
-
-      updateDataset('CO2', sourceTables.co2);
-    },
-    setStatus: (status) => { co2RefreshStatus = status; },
-    setSource: (source) => { co2RefreshSource = source; },
-    warnLabel: 'Remote CO2 refresh'
-  });
-}
-
-async function refreshSealevelWithRemoteColorado() {
-  await refreshSeriesFromRemote({
-    enabled: SEALEVEL_REMOTE_UPDATE_ENABLED,
-    urlCandidates: SEALEVEL_REMOTE_URL_CANDIDATES,
-    parseRows: (rawText) => parseColoradoSeaLevelRows(rawText.split(/\r?\n/)),
-    applyRows: (remoteRows) => {
-      sourceTables.coloradoSealevel = mergeRecentSealevelRows(
-        sourceTables.coloradoSealevel,
-        remoteRows,
-        SEALEVEL_REMOTE_UPDATE_WINDOW_YEARS
-      );
-
-      sourceTables.sealevel = buildCombinedSeaLevelTable(
-        parseSeaLevelTableRows(sourceTables.coloradoSealevel),
-        parseGp2014SeaLevelRows(sourceTables.sealevelGpRaw),
-        parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw)
-      );
-      updateDataset('Sealevel', sourceTables.sealevel);
-    },
-    setStatus: (status) => { sealevelRefreshStatus = status; },
-    setSource: (source) => { sealevelRefreshSource = source; },
-    warnLabel: 'Remote sea level refresh'
-  });
-}
-
-async function refreshSolarWithRemoteTsis() {
-  await refreshSeriesFromRemote({
-    enabled: SOLAR_REMOTE_UPDATE_ENABLED,
-    urlCandidates: SOLAR_REMOTE_TSIS_URL_CANDIDATES,
-    parseRows: (rawText) => parseTsisSolarRows(rawText.split(/\r?\n/)),
-    applyRows: (remoteRows) => {
-      const observations = mergeTsisObservations(sourceTables.solarTsisRows, remoteRows);
-      sourceTables.solarIrradiance = mergeSolarTableWithNnlAndTsis(
-        sourceTables.solarBase, sourceTables.solarIrradianceNnlRaw,
-        sourceTables.solarIrradianceTsisRaw, observations
-      );
-      sourceTables.solarTsisRows = observations;
-      updateDataset('Solar Irradiance', sourceTables.solarIrradiance);
-    },
-    setStatus: (status) => { solarRefreshStatus = status; },
-    setSource: (source) => { solarRefreshSource = source; },
-    warnLabel: 'Remote solar TSIS refresh'
-  });
-}
-
-function refreshAllRemoteSeries() {
-  refreshTemperatureWithRemoteGiss();
-  refreshCo2WithRemoteNoaaDaily();
-  refreshSealevelWithRemoteColorado();
-  refreshSolarWithRemoteTsis();
 }
 
 function parseNoaaDailyCo2Rows(rawLines) {
@@ -753,10 +487,6 @@ function parseCencopipCo2Rows(rawLines) {
     });
   }
   return sortRowsByTimeDesc(rows);
-}
-
-function parseCo2TableRows(table) {
-  return extractTimeValueRows(table, 'CO2', 'co2');
 }
 
 function buildCombinedCo2Table() {
@@ -1047,10 +777,6 @@ function parseMiller2024SeaLevelRows(rawLines) {
   return sortRowsByTimeDesc(rows);
 }
 
-function parseSeaLevelTableRows(table) {
-  return extractTimeValueRows(table, 'Sealevel', 'sealevel');
-}
-
 function parseSolarIrradianceTableRows(table) {
   return extractTimeValueRows(table, 'Solar Irradiance', 'irradiance');
 }
@@ -1197,20 +923,6 @@ function parseTsisSolarRows(rawLines) {
   return sortRowsByTimeDesc(rows);
 }
 
-function mergeTsisObservations(localRows, remoteRows) {
-  if (!remoteRows || remoteRows.length === 0) return localRows;
-  const newestLocal = localRows.length > 0 ? localRows[0].time : Number.NEGATIVE_INFINITY;
-  const newestRemote = remoteRows.reduce((newest, row) => max(newest, row.time), Number.NEGATIVE_INFINITY);
-  if (newestRemote < newestLocal - 0.25) return localRows;
-  const byTime = new Map(localRows.map((row) => [Math.round(row.time * 10000), row]));
-  for (const row of remoteRows) {
-    if (Number.isFinite(row.time) && Number.isFinite(row.irradiance) && row.irradiance > 0) {
-      byTime.set(Math.round(row.time * 10000), { ...byTime.get(Math.round(row.time * 10000)), ...row });
-    }
-  }
-  return sortRowsByTimeDesc([...byTime.values()]);
-}
-
 function smoothDenseSolarRows(rows, denseStartTime, windowDays) {
   if (!rows || rows.length < 3) return rows;
   if (!Number.isFinite(windowDays) || windowDays <= 0) return rows;
@@ -1269,10 +981,10 @@ function smoothDenseSolarRows(rows, denseStartTime, windowDays) {
   return smoothedRows;
 }
 
-function mergeSolarTableWithNnlAndTsis(baseTable, nnlRawLines, tsisRawLines, tsisRowsOverride = null) {
+function mergeSolarTableWithNnlAndTsis(baseTable, nnlRawLines, tsisRawLines) {
   const base = parseSolarIrradianceTableRows(baseTable);
   const nnl = parseNnlSolarRows(nnlRawLines);
-  const tsis = mergeTsisObservations(parseTsisSolarRows(tsisRawLines), tsisRowsOverride)
+  const tsis = parseTsisSolarRows(tsisRawLines)
     .map(row => ({ ...row, source: 'solar-tsis', maxGapYears: 7 / 365.2425 }));
   // Preserve the measured TSIS irradiances. Only shift the historical models.
   const nnlAlignment = pairedSolarOffset(nnl, tsis);
@@ -1336,25 +1048,24 @@ function setup() {
   sourceTables.population = buildPopulationTableFromLongRun(sourceTables.populationLongRunRaw, year());
   sourceTables.co2 = buildCombinedCo2Table();
 
-  sourceTables.gissTemperature = buildTimeValueTable(parseGissTemperatureRows(sourceTables.gissTempRaw), 'temperature', 'Temperature');
-  rebuildCombinedTemperature();
+  sourceTables.temperature = buildCombinedTemperatureTable(
+    parseGissTemperatureRows(sourceTables.gissTempRaw),
+    parseNeukomTemperatureRows(sourceTables.neukomTempRaw),
+    parseOsmanTemperatureRows(sourceTables.osmanTempRaw),
+    parseHansenTemperatureRows(sourceTables.hansenTempRaw));
   sourceTables.solarBase = buildTimeValueTable(
     parsePmipSolarRows(sourceTables.solarIrradiance),
     'irradiance',
     'Solar Irradiance',
     sourceTables.solarIrradiance
   );
-  sourceTables.solarTsisRows = parseTsisSolarRows(sourceTables.solarIrradianceTsisRaw);
   sourceTables.solarIrradiance = mergeSolarTableWithNnlAndTsis(
     sourceTables.solarBase,
     sourceTables.solarIrradianceNnlRaw,
-    sourceTables.solarIrradianceTsisRaw,
-    sourceTables.solarTsisRows
+    sourceTables.solarIrradianceTsisRaw
   );
-  sourceTables.coloradoSealevel = buildTimeValueTable(
-    parseColoradoSeaLevelRows(sourceTables.sealevelRaw), 'sealevel', 'Sealevel');
   sourceTables.sealevel = buildCombinedSeaLevelTable(
-    parseSeaLevelTableRows(sourceTables.coloradoSealevel),
+    parseColoradoSeaLevelRows(sourceTables.sealevelRaw),
     parseGp2014SeaLevelRows(sourceTables.sealevelGpRaw),
     parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw));
 
@@ -1409,24 +1120,18 @@ function setup() {
   event.push(new TimelineEvent(1, 'COVID-19', 2020.082137, 2023.342238, 255));
 
   // Temperature stays at the bottom; simple top buttons choose the comparison.
-  data.push(new Data(sourceTables.temperature, 'time', 'Temperature', '°C', 0, color(255), 0, temperatureAutoScale, 'Global temperature'));
+  data.push(new Data(sourceTables.temperature, 'time', 'Temperature', '°C', 0, color(255), 0, true, 'Global temperature'));
   data.push(new Data(sourceTables.co2, 'time', 'CO2', 'ppm', 1, color(255, 128, 64), 0, true, 'Atmospheric CO₂'));
   data.push(new Data(sourceTables.earthOrbit, 'time', 'Eccentricity', '', 1, color(128, 128, 255), 0, false, 'Orbital eccentricity'));
   data.push(new Data(sourceTables.solarIrradiance, 'time', 'Solar Irradiance', 'W/m²', 1, color(255, 220, 0), 0, true, 'Total solar irradiance'));
   data.push(new Data(sourceTables.volcanic, 'time', 'Volcanic Activity', 'OD', 1, color(255, 180, 80), 0, true, 'Volcanic optical depth'));
   data.push(new Data(sourceTables.sealevel, 'time', 'Sealevel', 'm', 1, color(0, 128, 255), 0, true, 'Global sea level'));
-  data.push(new Data(sourceTables.population, 'time', 'Population', 'people', 1, color(255, 128, 200), 0, true, 'World population (estimates and projections)'));
+  data.push(new Data(sourceTables.population, 'time', 'Population', 'people', 1, color(255, 128, 200), 0, true, 'World population'));
 }
 
 function selectComparison(upperIndex) {
   if (!data[upperIndex] || upperIndex < 1) return;
   selectedData = upperIndex;
-  redrawRequested = true;
-}
-
-function toggleTemperatureScale() {
-  temperatureAutoScale = !temperatureAutoScale;
-  data[0].yScrolling = temperatureAutoScale;
   redrawRequested = true;
 }
 
@@ -1558,21 +1263,13 @@ function draw() {
       const perfLine1 = `FPS: ${nfs(frameRate(), 0, 1)}  Zoom: ${nfc(scrollValue, 0)}`;
       const perfLine2 = `Data verts: ${perfDataVertices}  Events drawn: ${perfEventsDrawn}  culled: ${perfEventsCulled}`;
       const perfLine3 = `Timeline labels: ${perfTimelineLabels} / ticks: ${perfTimelineTicks}`;
-      const perfLine4 = `Temp refresh: ${gissRefreshStatus} (${gissRefreshSource})`;
-      const perfLine5 = `CO2 refresh: ${co2RefreshStatus} (${co2RefreshSource})`;
-      const perfLine6 = `Sea lvl refresh: ${sealevelRefreshStatus} (${sealevelRefreshSource})`;
-      const perfLine7 = `Solar refresh: ${solarRefreshStatus} (${solarRefreshSource})`;
       fill(0, 32, 64, BACKGROUND_ALPHA_HIGH);
-      rect(8, 8, max(textWidth(perfLine1), max(textWidth(perfLine2), max(textWidth(perfLine3), max(textWidth(perfLine4), max(textWidth(perfLine5), max(textWidth(perfLine6), textWidth(perfLine7))))))) + 12, height / TEXT_SIZE_DIVISOR_TINY * 8);
+      rect(8, 8, max(textWidth(perfLine1), textWidth(perfLine2), textWidth(perfLine3)) + 12, height / TEXT_SIZE_DIVISOR_TINY * 4);
       fill(255);
       noStroke();
       text(perfLine1, 14, 10);
       text(perfLine2, 14, 10 + height / TEXT_SIZE_DIVISOR_TINY);
       text(perfLine3, 14, 10 + 2 * (height / TEXT_SIZE_DIVISOR_TINY));
-      text(perfLine4, 14, 10 + 3 * (height / TEXT_SIZE_DIVISOR_TINY));
-      text(perfLine5, 14, 10 + 4 * (height / TEXT_SIZE_DIVISOR_TINY));
-      text(perfLine6, 14, 10 + 5 * (height / TEXT_SIZE_DIVISOR_TINY));
-      text(perfLine7, 14, 10 + 6 * (height / TEXT_SIZE_DIVISOR_TINY));
     }
   }
   pScrollValue = scrollValue; // Store previous scroll value for change detection
@@ -1612,12 +1309,6 @@ function keyPressed() {
   if (/^[0-9]$/.test(key)) setZoom(presets[Number(key)]);
   if (key === 'p' || key === 'P') { perfHUD = !perfHUD; redrawRequested = true; }
   if (key === 'C' || key === 'c' || key === ' ') { showCursor = !showCursor; redrawRequested = true; }
-  if (key === 'V' || key === 'v') { showDataSourceTooltip = !showDataSourceTooltip; redrawRequested = true; }
-  if (key === 'Y' || key === 'y') toggleTemperatureScale();
-  if (key === 'H' || key === 'h') showDataGuide();
-  if (key === 'R' || key === 'r') {
-    refreshAllRemoteSeries();
-  }
 }
 
 function sourceLabelForDataPoint(sample) {
@@ -1643,10 +1334,6 @@ function mousePressed() {
   if (mouseButton === RIGHT) { showCursor = !showCursor; redrawRequested = true; }
   else if (mouseY >= 0 && mouseY < height / GUI_HEIGHT_DIVISOR && mouseX >= 0 && mouseX < width) {
     selectComparison(1 + Math.floor(mouseX / width * (data.length - 1)));
-  } else if (mouseX > width - 220 && mouseY >= data[0].rectY + 20 && mouseY < data[0].rectY + 45) {
-    toggleTemperatureScale();
-  } else if (mouseX < 190 && mouseY >= data[0].rectY + 40 && mouseY < data[0].rectY + 65) {
-    showDataGuide();
   }
 }
 
@@ -1795,13 +1482,18 @@ class Data {
     this.localMaxY = this.maxY;
     this.distY = this.maxY - this.minY;
     if (this.yScrolling && visibleCount > 0) {
-      // Use only visible data for Y-axis scaling
+      // Fit visible samples and the portion of a connecting line at the left edge.
       this.localMaxY = this.dataY[0];
       this.localMinY = this.dataY[0];
       for (let i = 0; i < visibleCount; i += 1) {
         const [lower, upper] = this.valueBoundsAt(i);
         if (upper > this.localMaxY) this.localMaxY = upper;
         if (lower < this.localMinY) this.localMinY = lower;
+      }
+      const edgeBounds = this.leftEdgeValueBounds(visibleCount);
+      if (edgeBounds) {
+        this.localMinY = min(this.localMinY, edgeBounds[0]);
+        this.localMaxY = max(this.localMaxY, edgeBounds[1]);
       }
       this.distY = this.localMaxY - this.localMinY;
     }
@@ -1839,7 +1531,7 @@ class Data {
       textAlign(LEFT, TOP);
       text(this.displayName + ':', shift + 10, this.rectY + 5);
       textSize(height / TEXT_SIZE_DIVISOR_SMALL);
-      text('No sampled data in this period. Zoom out to see the record.', shift + 10, this.rectY + 35);
+      text('No samples in view. Zoom out.', shift + 10, this.rectY + 35);
       return;
     }
 
@@ -1856,46 +1548,11 @@ class Data {
     textSize(height / TEXT_SIZE_DIVISOR_MEDIUM);
     fill(this.c);
     textAlign(LEFT, TOP);
-    if (this.temperatureRows) text(this.displayName + ':', shift + 10, this.rectY + 5);
-    else if (this.rectX + this.rectW < shift && this.rectX > shift + textWidth(this.displayName)) text(this.displayName + ':', shift + 10, this.rectY + 5);
-    else if (this.rectX + this.rectW > shift) text(this.displayName + ':', this.rectX + this.rectW + 10, this.rectY + 5);
-    else if (this.rectX < shift + textWidth(this.displayName)) text(this.displayName + ':', this.rectX - textWidth(this.displayName) + 10, this.rectY + 5);
-
-    // Show the independent vertical scale used by this panel.
-    textSize(height / TEXT_SIZE_DIVISOR_TINY);
-    textAlign(RIGHT, TOP);
-    const axisUnit = this.unit ? ' ' + this.unit : '';
-    text(this.formatTooltipValue(this.localMaxY) + axisUnit, width - 8, this.rectY + 4);
-    textAlign(RIGHT, BOTTOM);
-    text(this.formatTooltipValue(this.localMinY) + axisUnit, width - 8, this.rectY + this.rectH - 4);
-    if (this.temperatureRows) {
-      textAlign(LEFT, TOP);
-      text('Relative to 1961–1990 • source joins marked', shift + 10, this.rectY + height / 34);
-      text('About the data [H]', shift + 10, this.rectY + 46);
-      textAlign(RIGHT, TOP);
-      text('Scale: ' + (temperatureAutoScale ? 'visible range' : 'fixed') + ' [Y]', width - 8, this.rectY + 24);
-    }
-    if (this.columnY === 'Sealevel') {
-      textAlign(LEFT, TOP);
-      text('Relative to 1950 mean • geological reference approximate', shift + 10, this.rectY + height / 34);
-    }
-    if (this.solarCadence) {
-      textAlign(LEFT, TOP);
-      text(this.solarCadence === 'annual' ? 'Annual means • source joins marked'
-        : 'Annual before 1850 • 50-day means since 1850', shift + 10, this.rectY + height / 34);
-    }
-    if (this.columnY === 'CO2' && this.seriesRows.slice(0, visibleCount).some(row => row.band)) {
-      textAlign(LEFT, TOP);
-      text('Deep time: 500,000-year averages • 95% uncertainty band', shift + 10, this.rectY + height / 34);
-    }
-    if (this.columnY === 'Eccentricity') {
-      textAlign(LEFT, TOP);
-      text('1,600 years between samples • latest sample: 2000 CE', shift + 10, this.rectY + height / 34);
-    }
+    text(this.displayName + ':', shift + 10, this.rectY + 5);
 
     // Begin drawing the data line/curve
-    // The extra off-screen point maintains the line at the left edge but must
-    // neither set the visible scale nor draw beyond the panel's bounds.
+    // The extra point draws the connecting line at the left edge. Only its
+    // visible intersection contributes to scaling; its off-screen value does not.
     drawingContext.save();
     drawingContext.beginPath();
     drawingContext.rect(shift, this.rectY, width - shift, this.rectH);
@@ -1954,6 +1611,23 @@ class Data {
     const row = this.seriesRows?.[index];
     return this.hasUncertaintyBand(index)
       ? [min(value, row.lower), max(value, row.upper)] : [value, value];
+  }
+
+  leftEdgeValueBounds(visibleCount) {
+    if (this.type === 1 || visibleCount < 1 || visibleCount >= this.dataX.length || oneYear >= 0) return null;
+    const newer = visibleCount - 1;
+    const older = visibleCount;
+    if (!this.canConnectIndices(newer, older)) return null;
+    const edgeTime = this.BP + (width - shift) / oneYear;
+    const fraction = (edgeTime - this.dataX[newer]) / (this.dataX[older] - this.dataX[newer]);
+    if (!Number.isFinite(fraction) || fraction < 0 || fraction > 1) return null;
+    const interpolate = (a, b) => a + fraction * (b - a);
+    const value = interpolate(this.dataY[newer], this.dataY[older]);
+    if (this.hasUncertaintyBand(newer) && this.hasUncertaintyBand(older)) {
+      return [min(value, interpolate(this.seriesRows[newer].lower, this.seriesRows[older].lower)),
+        max(value, interpolate(this.seriesRows[newer].upper, this.seriesRows[older].upper))];
+    }
+    return [value, value];
   }
 
   drawUncertaintyBands(renderDistance, x, y, w, h) {
@@ -2033,11 +1707,11 @@ class Data {
   }
 
   drawSourceJoins(renderDistance) {
-    // Reserve room for the vertical-axis label and omit join labels that collide
-    // when several recent transitions occupy the same few pixels.
-    const axisLabelLeft = width - max(80, textWidth(this.formatTooltipValue(this.localMinY) + ' ' + this.unit) + 8);
-    let nextLabelRight = axisLabelLeft;
+    // Omit join labels that collide when several transitions share a few pixels.
+    const labelRightLimit = width - 8;
+    let nextLabelRight = labelRightLimit;
     const labels = [];
+    textSize(max(11, min(14, height / TEXT_SIZE_DIVISOR_SMALL)));
     strokeWeight(1);
     for (let i = 1; i < renderDistance; i++) {
       const newer = this.seriesRows[i - 1];
@@ -2067,7 +1741,7 @@ class Data {
     }
     labels.sort((a, b) => b.x - a.x);
     for (const { label, x } of labels) {
-      const labelRight = min(x - 4, axisLabelLeft);
+      const labelRight = min(x - 4, labelRightLimit);
       const labelLeft = labelRight - textWidth(label);
       if (labelRight <= nextLabelRight && labelLeft >= shift) {
         noStroke();
@@ -2111,9 +1785,7 @@ class Data {
     textSize(max(11, min(14, height / TEXT_SIZE_DIVISOR_SMALL)));
     const valueText = this.formatTooltipValue(this.dataY[index]);
     const mouseData = this.unit ? valueText + ' ' + this.unit : valueText;
-    const sourceLabel = (showDataSourceTooltip || this.temperatureRows || this.hasSourceJoins)
-      ? sourceLabelForDataPoint(this.seriesRows?.[index])
-      : '';
+    const sourceLabel = sourceLabelForDataPoint(this.seriesRows?.[index]);
     const sourceLine = sourceLabel ? 'Source: ' + sourceLabel : '';
     const sample = this.seriesRows?.[index];
     let sampleLine = '';
