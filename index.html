@@ -18,9 +18,119 @@
     canvas {
       display: block;
     }
+
+    dialog { max-width: 640px; max-height: 80vh; overflow: auto; padding: 1.5rem;
+      color: #eee; background: #002040; border: 1px solid #789;
+      font: 15px/1.5 system-ui, sans-serif; }
+    dialog::backdrop { background: #0009; }
+    dialog a { color: #9dd7ff; }
+    dialog button { float: right; padding: 0.4rem 0.8rem; }
   </style>
 </head>
 <body>
+  <dialog id="about-data">
+    <form method="dialog"><button>Close</button></form>
+    <h2>Explore climate through time</h2>
+    <p>Choose a button above to compare a dataset with global temperature below.
+      Scroll to zoom. Both panels use the same linear time axis: equal distances
+      represent equal amounts of time throughout each view.</p>
+    <p>Temperature and most comparisons automatically fit their vertical scales to the visible data:
+      the lowest and highest values sit at the bottom and top of each rectangle.
+      A drawn uncertainty band is included in that range.
+      Click temperature's scale label or press <b>Y</b> to switch to a fixed range.
+      Orbit uses a fixed vertical range. Each panel uses its own values;
+      similar-looking slopes do not mean equal changes.</p>
+    <p>The temperature curve combines Hansen's deep-time global estimate,
+      Osman's 200-year global reconstruction, PAGES2k's annual reconstruction,
+      and GISS monthly observations. Values are relative to 1961–1990. Dashed
+      markers and breaks show where sources change; a jump there can reflect
+      disagreement between reconstructions.</p>
+    <p>GISS is rebased using its 1961–1990 mean. Hansen uses the author's 14 °C
+      reference. Osman's baseline is estimated from its 150–1750 CE overlap
+      with PAGES2k. These are constant offsets; no variability is stretched or
+      compressed to make sources agree. EPICA's Antarctic temperatures are
+      excluded from the global curve.</p>
+    <p>Hover to see the temperature source, sample date and available uncertainty.
+      PAGES2k shows a 95% ensemble range; Osman shows one standard deviation.
+      These describe different uncertainty measures and exclude additional
+      uncertainty in joining the sources. Hansen's uncertainty is not quantified
+      in this view. Ancient records cannot resolve the monthly changes visible
+      in modern observations.</p>
+    <p>The sources use different temperature definitions and methods. For example,
+      GISS blends land air temperatures and sea surface temperatures; Osman
+      reconstructs near-surface air temperature. This is a view of broad climate
+      history, not a homogeneous record for precise rates or lags across joins.</p>
+    <h3>The comparison datasets</h3>
+    <p><b>Source changes:</b> dashed markers and breaks identify joins in the top
+      datasets too. Individual missing observations are not given gap markers.
+      Hover to see the source, actual sample date and available uncertainty. A jump at
+      a join may reflect differences between methods.</p>
+    <p><b>Sea level:</b> one button now spans geological estimates, a global
+      tide-gauge reconstruction and satellite measurements. Modern values
+      are relative to the 1950 mean; satellite data are aligned using matching
+      months in their overlap with tide gauges. The geological zero-age point
+      provides only an approximate reference. The shaded gap from about 640
+      to 1807 CE has no connecting line. Ancient estimates are much coarser
+      and less certain. Local coastal samples are excluded.</p>
+    <p><b>CO₂:</b> daily station observations continue the published Antarctic
+      ice-core composite. Lines connect available samples within each source,
+      including days with no observation in between; no missing measurements
+      are added. The source joins remain marked and disconnected.</p>
+    <p>For deep time, the
+      <a href="https://doi.org/10.1126/science.adi5177">CenCO₂PIP reconstruction</a>
+      combines multiple proxy methods into one broad trend. We use the authors'
+      <a href="https://zenodo.org/records/10471529">January 2024 update</a>:
+      the line shows the median estimate of CO₂ averaged over 500,000 years;
+      the shaded area shows its 95% credible interval. This is uncertainty in
+      the estimated average, not the spread of every measurement or the range
+      of short-term changes. Hover for the bounds and bin midpoint. Zooming in
+      cannot reveal changes finer than these averages. Compare broad trends,
+      not precise peaks or lags against more finely sampled temperature.
+      The original proxy files remain available for reference in
+      <a href="data/SOURCES.md">the source notes</a>.
+      <a href="data/co2/cencopip2023-LICENSE.txt">Dataset license</a>.</p>
+    <p><b>Solar:</b> the older PMIP4 file already combines proxy and sunspot
+      reconstructions with the CMIP6 solar model composite. NNL continues it
+      from 1874; TSIS satellite observations begin in 2018. These source
+      changes are marked. All values are at a fixed Sun–Earth distance of
+      1 AU, so orbital distance changes are excluded.</p>
+    <p>Historical models receive constant reference shifts; TSIS keeps its
+      measured level. The shifts compare the same dates, using a median of
+      monthly differences to reduce the influence of exceptional months.
+      The older join uses roughly two solar cycles near the transition.
+      Model trends and cycle amplitudes can still disagree; a shift does
+      not make these one homogeneous record.</p>
+    <p>When more than 200 years are visible, solar data appear as annual means
+      to match the older annual record. Zooming in restores the daily dates
+      with 50-day means from 1850 onward. The caption identifies the view;
+      tooltips identify partial years and their coverage. No average blends
+      source joins or fills missing days. Unusual valid readings are retained,
+      and provisional readings stay labelled. Typical solar-cycle changes
+      are around 0.1% of the roughly 1361 W/m² total: automatic vertical
+      scaling makes small changes appear large.</p>
+    <p><b>Volcanoes:</b> the published HolVol / eVolv2k / CMIP6 combination is
+      retained, with its component changes marked. Values are annual global
+      aerosol optical depth, rather than eruption counts.</p>
+    <p><b>Orbit:</b> published samples are 1,600 years apart, with the latest at
+      2000 CE, the calculation's reference date. No daily record is
+      available here: zoom out if the panel is empty. Data older than 58 million
+      years are omitted because the provider warns that orbital phase is
+      unconstrained there.</p>
+    <p><b>Population:</b> historical estimates run through 2023. Values from
+      2024 are projections and appear as dashed lines, even for years that
+      have already passed.</p>
+    <p>Visual agreement helps you ask questions, but does not establish causation.
+      Some reconstructions use climate models and shared inputs: Osman uses
+      model priors that include greenhouse-gas forcing. Its relationship with
+      CO₂ is not a fully independent test. Miller's sea-level estimates also
+      use temperature-related inputs, which can influence their agreement
+      with temperature.</p>
+    <p><b>Controls:</b> +/D and −/A zoom; 0–9 select time scales; C toggles the
+      cursor; V shows sources for single-source datasets; R refreshes recent observations;
+      H opens this guide.</p>
+    <p>Read the <a href="README.md">project guide</a> and
+      <a href="data/SOURCES.md">sources and combination methods</a> for details.</p>
+  </dialog>
   <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.min.js"></script>
   <script src="sketch.js"></script>
 </body>

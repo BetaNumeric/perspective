@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "giss",
+      "label": "NASA GISS global monthly temperature",
+      "format": "giss",
+      "url": "https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.txt",
+      "path": "data/temperature/GLB.Ts+dSST.txt",
+      "units": "0.01 degrees Celsius relative to 1951-1980",
+      "minimum_observations": 1700
+    },
+    {
+      "id": "noaa-co2",
+      "label": "NOAA daily Mauna Loa / Maunakea CO2 observations",
+      "format": "noaa-co2",
+      "url": "https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_daily_mlo.txt",
+      "path": "data/co2/co2_daily_mlo.txt",
+      "units": "ppm",
+      "minimum_observations": 10000
+    },
+    {
+      "id": "tsis",
+      "label": "TSIS daily total solar irradiance at 1 AU",
+      "format": "tsis",
+      "url": "https://lasp.colorado.edu/lisird/latis/dap/tsis_tsi_24hr.txt",
+      "path": "data/solar/tsis_tsi_24hr.txt",
+      "units": "W/m2 at 1 AU",
+      "minimum_observations": 1500
+    },
+    {
+      "id": "colorado",
+      "label": "Colorado satellite global mean sea level, 2026 release 2",
+      "format": "colorado",
+      "url": "https://sealevel.colorado.edu/files/2026_rel2/gmsl_2026rel2_seasons_retained.txt",
+      "path": "data/sealevel/gmsl_2026rel2_seasons_retained.txt",
+      "units": "mm, GIA removed, seasonal cycle retained",
+      "release": "2026_rel2",
+      "release_page": "https://sealevel.colorado.edu/data",
+      "minimum_observations": 800
+    }
+  ]
+}

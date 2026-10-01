@@ -1,0 +1,79 @@
+name: Update climate observations
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Twice a month, at 07:23 UTC; avoid the busy start of the hour.
+    - cron: '23 7 1,16 * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-climate-observations
+  cancel-in-progress: false
+
+jobs:
+  update-data:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+      commit: ${{ steps.commit.outputs.commit }}
+    steps:
+      - name: Check out the default branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Test the updater
+        run: python -m unittest discover -s tests -p 'test_update_data.py'
+
+      - name: Download and validate current observations
+        run: python scripts/update_data.py
+
+      - name: Check the combined climate datasets
+        run: node tests/climate.test.cjs
+
+      - name: Commit changed observations
+        id: commit
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git add -- data/temperature/GLB.Ts+dSST.txt data/co2/co2_daily_mlo.txt data/solar/tsis_tsi_24hr.txt data/sealevel/gmsl_2026rel2_seasons_retained.txt data/update-metadata.json
+          if git diff --cached --quiet; then
+            echo "No observation changes."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Update current climate observations"
+            git push origin "HEAD:$DEFAULT_BRANCH"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: update-data
+    if: needs.update-data.outputs.changed == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy-pages.yml
+    with:
+      ref: ${{ needs.update-data.outputs.commit }}

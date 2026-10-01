@@ -2,7 +2,6 @@
 const GUI_HEIGHT_DIVISOR = 12;        // Top GUI bar height
 const TIMELINE_HEIGHT_DIVISOR = 14;   // Bottom timeline height
 const TIMELINE_HEIGHT_DIVISOR_SMALL = 36; // Small timeline elements
-const TEXT_SIZE_DIVISOR_LARGE = 36;   // Large text scaling
 const TEXT_SIZE_DIVISOR_MEDIUM = 48;  // Medium text scaling
 const TEXT_SIZE_DIVISOR_SMALL = 60;   // Small text scaling
 const TEXT_SIZE_DIVISOR_TINY = 70;    // Tiny text scaling
@@ -19,16 +18,14 @@ const BACKGROUND_ALPHA_HIGH = 230;    // High opacity background
 const STROKE_ALPHA_LOW = 64;          // Low opacity stroke
 const STROKE_ALPHA_MEDIUM = 100;      // Medium opacity stroke
 const TIMELINE_LABEL_MIN_SPACING = 70;
-const TEMPERATURE_VARIABILITY_MATCH_ENABLED = true;
-const TEMPERATURE_NEUKOM_MATCH_WINDOW_YEARS = 120;
-const TEMPERATURE_GISS_MATCH_WINDOW_YEARS = 20;
-const TEMPERATURE_VARIABILITY_MIN_SCALE = 0.15;
-const TEMPERATURE_VARIABILITY_MAX_SCALE = 3.0;
 const SOLAR_DENSE_SMOOTH_START_TIME = -100; // 1850 CE in year-1950 axis
-const SOLAR_DENSE_SMOOTH_WINDOW_DAYS = 50;
+const SOLAR_DENSE_SMOOTH_WINDOW_DAYS = 50; // Full width of the centered window
+const SOLAR_ANNUAL_VIEW_YEARS = 200; // Match the older record's annual resolution in long views.
+const SOLAR_ALIGNMENT_WINDOW_YEARS = 22; // Approximately two solar cycles near the historical join.
+const SOLAR_ALIGNMENT_MIN_DAYS = 15;
+const SOLAR_ALIGNMENT_MIN_MONTHS = 12;
+const ORBITAL_EPOCH_CE = 2000; // ZB18a uses J2000; see Kocken & Zeebe (2026), section 2.1.
 
-const CO2_RAE_D11B_FILL_BEFORE_TIME = -4000000;
-const CO2_HOLE_FILL_TOLERANCE_YEARS = 50000;
 const GISS_REMOTE_UPDATE_ENABLED = true;
 const GISS_REMOTE_UPDATE_WINDOW_YEARS = 15;
 const GISS_REMOTE_URL = 'https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.txt';
@@ -47,11 +44,11 @@ const CO2_REMOTE_DAILY_URL_CANDIDATES = [
 ];
 const SEALEVEL_REMOTE_UPDATE_ENABLED = true;
 const SEALEVEL_REMOTE_UPDATE_WINDOW_YEARS = 20;
-const SEALEVEL_REMOTE_URL = 'https://sealevel.colorado.edu/files/2026_rel1/gmsl_2026rel1_seasons_retained.txt';
+const SEALEVEL_REMOTE_URL = 'https://sealevel.colorado.edu/files/2026_rel2/gmsl_2026rel2_seasons_retained.txt';
 const SEALEVEL_REMOTE_URL_CANDIDATES = [
   SEALEVEL_REMOTE_URL,
-  'https://corsproxy.io/?https://sealevel.colorado.edu/files/2026_rel1/gmsl_2026rel1_seasons_retained.txt',
-  'https://r.jina.ai/http://sealevel.colorado.edu/files/2026_rel1/gmsl_2026rel1_seasons_retained.txt'
+  'https://corsproxy.io/?https://sealevel.colorado.edu/files/2026_rel2/gmsl_2026rel2_seasons_retained.txt',
+  'https://r.jina.ai/http://sealevel.colorado.edu/files/2026_rel2/gmsl_2026rel2_seasons_retained.txt'
 ];
 const SOLAR_REMOTE_UPDATE_ENABLED = true;
 const SOLAR_REMOTE_TSIS_URL = 'https://lasp.colorado.edu/lisird/latis/dap/tsis_tsi_24hr.txt';
@@ -60,6 +57,50 @@ const SOLAR_REMOTE_TSIS_URL_CANDIDATES = [
   'https://corsproxy.io/?https://lasp.colorado.edu/lisird/latis/dap/tsis_tsi_24hr.txt',
   'https://r.jina.ai/http://lasp.colorado.edu/lisird/latis/dap/tsis_tsi_24hr.txt'
 ];
+
+const SOURCE_INFO = {
+  giss: { short: 'GISS', label: 'NASA GISS • monthly observations', cadence: 'month' },
+  pages: { short: 'PAGES2k', label: 'PAGES2k • annual April–March reconstruction', cadence: 'year' },
+  osman: { short: 'Osman', label: 'Osman 2021 • 200-year means • estimated baseline' },
+  hansen: { short: 'Hansen', label: 'Hansen 2013 • coarse global temperature estimate' },
+  'co2-noaa': { short: 'NOAA', label: 'NOAA • Mauna Loa / Maunakea daily observations', cadence: 'day' },
+  'co2-scripps': { short: 'Scripps', label: 'Scripps • Mauna Loa daily observations', cadence: 'day' },
+  'co2-ice': { short: 'Ice cores', label: 'Bereiter 2015 • Antarctic ice-core composite' },
+  'co2-cencopip': { short: 'CenCO₂PIP', label: 'CenCO₂PIP 2023 • 500,000-year means • median reconstruction' },
+  'sea-satellite': { short: 'Satellites', label: 'Colorado • satellite sea level • overlap-aligned', cadence: 'day' },
+  'sea-gauges': { short: 'Tide gauges', label: 'Jevrejeva 2014 • monthly global reconstruction', cadence: 'month' },
+  'sea-miller': { short: 'Miller', label: 'Miller 2024 • geological global sea-level estimate' },
+  'solar-satire-m': { short: 'SATIRE-M', label: 'SATIRE-M / PMIP4 • annual proxy reconstruction • adjusted reference', cadence: 'year' },
+  'solar-satire-t': { short: 'SATIRE-T', label: 'SATIRE-T / PMIP4 • annual sunspot reconstruction • adjusted reference', cadence: 'year' },
+  'solar-cmip6': { short: 'CMIP6', label: 'CMIP6 • SATIRE/NRL model composite • adjusted reference', cadence: 'day' },
+  'solar-nnl': { short: 'NNL', label: 'NASA/NOAA/LASP NNL • model • aligned to TSIS', cadence: 'day' },
+  'solar-tsis': { short: 'TSIS', label: 'TSIS • observed irradiance at 1 AU', cadence: 'day' },
+  'volcano-holvol': { short: 'HolVol', label: 'HolVol v1 • annual mean stratospheric optical depth', cadence: 'year' },
+  'volcano-evolv2k': { short: 'eVolv2k', label: 'eVolv2k v3 • annual mean stratospheric optical depth', cadence: 'year' },
+  'volcano-cmip6': { short: 'CMIP6', label: 'CMIP6 v3 • annual mean stratospheric optical depth', cadence: 'year' },
+  'orbit-zeebe': { short: 'ZB18a', label: 'Zeebe 2019 ZB18a • 1,600-year spacing • 2000 epoch' },
+  'population-history': { short: 'Estimates', label: 'OWID • historical population estimates', cadence: 'year' },
+  'population-projection': { short: 'Projections', label: 'OWID • population projection, not an observation', cadence: 'year' }
+};
+
+function sourceSegment(row) {
+  return row?.segment || row?.source || '';
+}
+
+function sampleTimeLabel(row) {
+  const calendarYear = row.time + 1950;
+  const cadence = SOURCE_INFO[row.source]?.cadence;
+  if (row.sampleDate) return row.sampleDate;
+  if (row.source === 'giss') {
+    return Math.floor(calendarYear) + '-' + String(1 + Math.round((calendarYear % 1) * 12)).padStart(2, '0');
+  }
+  if (cadence === 'year') return Math.abs(Math.round(calendarYear)) + (calendarYear < 0 ? ' BCE' : ' CE');
+  if (cadence === 'month' || cadence === 'day') {
+    const iso = new Date(millisecondsFromDecimalYear(calendarYear)).toISOString();
+    return iso.slice(0, cadence === 'month' ? 7 : 10);
+  }
+  return row.time <= 0 ? nfc(-row.time, row.time < -10000 ? 0 : 2) + ' years BP (1950)' : nfc(calendarYear, 2) + ' CE';
+}
 
 // Global data structures and variables
 let data = [];                        // All loaded datasets
@@ -74,8 +115,12 @@ let yearShift = 0;                    // Year alignment offset
 let shift = SHIFT_OFFSET;             // Left margin shift
 let showCursor = true;                // Crosshair/tooltip visibility toggle
 let showDataSourceTooltip = false;    // Optional tooltip source label toggle
-let selectedData = 0;                 // Currently selected dataset index
-let maxData = 0;                      // Maximum dataset count
+let selectedData = 1;                 // Upper series index
+let temperatureAutoScale = true;      // Fit the visible temperature values by default
+let temperatureCalibration = {};
+let seaLevelCalibration = {};
+let solarCalibration = {};
+let redrawRequested = true;
 let perfHUD = false;
 let perfDataVertices = 0;
 let perfEventsDrawn = 0;
@@ -90,25 +135,19 @@ let sealevelRefreshStatus = 'local';
 let sealevelRefreshSource = 'local file';
 let solarRefreshStatus = 'local';
 let solarRefreshSource = 'local file';
-let solarNnlNewestTime = Number.NEGATIVE_INFINITY;
-let solarNnlOldestTime = Number.POSITIVE_INFINITY;
-let solarTsisNewestTime = Number.NEGATIVE_INFINITY;
-let solarTsisOldestTime = Number.POSITIVE_INFINITY;
 
 function preload() {
   // Orbital
-  sourceTables.zeebeOrbitalRaw = loadStrings('data/orbit/zeebe2019orbital.txt'); // ~[-67,000,000, now]
+  sourceTables.zeebeOrbitalRaw = loadStrings('data/orbit/zeebe2019orbital.txt'); // 100–0 Ma; draw only 58–0 Ma
 
   // Temperature (oldest -> newest)
   sourceTables.hansenTempRaw = loadStrings('data/temperature/Table.txt'); // ~[-66,000,000, now]
-  sourceTables.edcTempRaw = loadStrings('data/temperature/edc3deuttemp2007-noaa.txt'); // ~[-800,000, ~0]
+  sourceTables.osmanTempRaw = loadStrings('data/temperature/osman2021-gmst.csv'); // global, 24,000–0 BP
   sourceTables.neukomTempRaw = loadStrings('data/temperature/Full_ensemble_median_and_95pct_range.txt'); // ~[-1,949, now]
   sourceTables.gissTempRaw = loadStrings('data/temperature/GLB.Ts+dSST.txt'); // ~[-70, now]
 
   // CO2 (oldest -> newest)
-  sourceTables.co2RaeAlkenoneRaw = loadStrings('data/co2/rae2021alkenone-co2diffusive.txt'); // deep-time (multi-Myr)
-  sourceTables.co2TripatiRaw = loadStrings('data/co2/b_ca_tripati_2009.txt'); // deep-time (multi-Myr)
-  sourceTables.co2RaeD11bRaw = loadStrings('data/co2/rae2021co2-d11b-ph.txt'); // deep-time (multi-Myr)
+  sourceTables.co2CencopipRaw = loadStrings('data/co2/cencopip2023-500kyr.csv'); // author release v1.2, 500 kyr bins
   sourceTables.co2AntarcticaRaw = loadStrings('data/co2/antarctica2015co2composite-noaa.txt'); // ~[-800,000, ~0]
   sourceTables.co2InSituRaw = loadStrings('data/co2/daily_in_situ_co2_mlo.csv'); // ~[8, now]
   sourceTables.co2DailyRaw = loadStrings('data/co2/co2_daily_mlo.txt'); // modern daily (~late 20th c, now)
@@ -123,9 +162,8 @@ function preload() {
 
   // Sea Level (oldest -> newest)
   sourceTables.sealevelMillerRaw = loadStrings('data/sealevel/miller2024-sealevel.txt'); // deep-time (multi-Myr)
-  sourceTables.sealevelKoppRaw = loadStrings('data/sealevel/kopp2016-global.txt'); // CE-focused reconstruction
   sourceTables.sealevelGpRaw = loadStrings('data/sealevel/gslGPChange2014.txt'); // ~[late 1800s, recent]
-  sourceTables.sealevelRaw = loadStrings('data/sealevel/gmsl_2026rel1_seasons_retained.txt'); // satellite era -> now
+  sourceTables.sealevelRaw = loadStrings('data/sealevel/gmsl_2026rel2_seasons_retained.txt'); // satellite era -> now
 
   // Population
   sourceTables.populationLongRunRaw = loadStrings('data/population/population-long-run-with-projections.csv'); // ~[-11,950, >0]
@@ -146,7 +184,7 @@ function extractTimeValueRows(table, valueColumn, valueKey) {
     const value = row.getNum(valueColumn);
     if (!Number.isFinite(time) || !Number.isFinite(value)) continue;
 
-    rows.push({ time, [valueKey]: value });
+    rows.push({ ...table.seriesRows?.[i], time, [valueKey]: value });
   }
 
   return sortRowsByTimeDesc(rows);
@@ -162,6 +200,7 @@ function buildTimeValueTable(rows, valueKey, valueColumn, fallbackTable = null) 
     row.setNum('time', rows[i].time);
     row.setNum(valueColumn, rows[i][valueKey]);
   }
+  table.seriesRows = rows;
 
   if (table.getRowCount() > 0) return table;
   return fallbackTable;
@@ -171,6 +210,7 @@ function cloneTimeValueRows(rows, valueKey) {
   const cloned = new Array(rows.length);
   for (let i = 0; i < rows.length; i++) {
     cloned[i] = {
+      ...rows[i],
       time: rows[i].time,
       [valueKey]: rows[i][valueKey]
     };
@@ -178,165 +218,47 @@ function cloneTimeValueRows(rows, valueKey) {
   return cloned;
 }
 
-function appendRowsOutsideInclusiveRange(targetRows, sourceRows, valueKey, newestTime, oldestTime) {
-  for (let i = 0; i < sourceRows.length; i++) {
-    const timeValue = sourceRows[i].time;
-    const value = sourceRows[i][valueKey];
-    if (!Number.isFinite(timeValue) || !Number.isFinite(value)) continue;
-    if (timeValue <= newestTime && timeValue >= oldestTime) continue;
-
-    targetRows.push({
-      time: timeValue,
-      [valueKey]: value
-    });
-  }
+function millisecondsFromDecimalYear(decimalYear) {
+  const calendarYear = Math.floor(decimalYear);
+  const start = Date.UTC(calendarYear, 0, 1);
+  return Math.round(start + (decimalYear - calendarYear) * (Date.UTC(calendarYear + 1, 0, 1) - start));
 }
 
-function averageRowsInRange(rows, valueKey, startTime, endTime) {
-  let sum = 0;
-  let count = 0;
-
-  for (let i = 0; i < rows.length; i++) {
-    const timeValue = rows[i].time;
-    const value = rows[i][valueKey];
-    if (timeValue < startTime || timeValue > endTime) continue;
-    if (!Number.isFinite(value)) continue;
-
-    sum += value;
-    count++;
-  }
-
-  if (count === 0) return null;
-  return sum / count;
+function decimalYearFromMilliseconds(milliseconds) {
+  const date = new Date(milliseconds);
+  const calendarYear = date.getUTCFullYear();
+  const start = Date.UTC(calendarYear, 0, 1);
+  return calendarYear + (milliseconds - start) / (Date.UTC(calendarYear + 1, 0, 1) - start);
 }
 
-function rowStatsInRange(rows, valueKey, startTime, endTime) {
-  let count = 0;
-  let mean = 0;
-  let m2 = 0;
-
-  for (let i = 0; i < rows.length; i++) {
-    const timeValue = rows[i].time;
-    const value = rows[i][valueKey];
-    if (timeValue < startTime || timeValue > endTime) continue;
-    if (!Number.isFinite(value)) continue;
-
-    count++;
-    const delta = value - mean;
-    mean += delta / count;
-    const delta2 = value - mean;
-    m2 += delta * delta2;
+function matchedMonthlyOffset(sourceRows, referenceRows, valueKey, start = -Infinity, end = Infinity) {
+  function monthlyMeans(rows) {
+    const bins = new Map();
+    for (const row of rows) {
+      if (row.time < start || row.time > end) continue;
+      const date = new Date(millisecondsFromDecimalYear(row.time + 1950));
+      const key = date.getUTCFullYear() * 12 + date.getUTCMonth();
+      const bin = bins.get(key) || { sum: 0, count: 0 };
+      bin.sum += row[valueKey];
+      bin.count++;
+      bins.set(key, bin);
+    }
+    return bins;
   }
-
-  if (count === 0) return null;
-  if (count === 1) return { count, mean, std: 0 };
-
-  return {
-    count,
-    mean,
-    std: sqrt(m2 / count)
-  };
+  const source = monthlyMeans(sourceRows);
+  const reference = monthlyMeans(referenceRows);
+  const differences = [];
+  for (const [key, bin] of source) {
+    const target = reference.get(key);
+    if (target) differences.push(target.sum / target.count - bin.sum / bin.count);
+  }
+  return differences.length ? differences.reduce((sum, value) => sum + value, 0) / differences.length : null;
 }
 
-function calibrateRowsToReferenceByOverlap(sourceRows, referenceRows, valueKey) {
-  if (sourceRows.length === 0 || referenceRows.length === 0) return sourceRows;
-
-  const sourceNewest = sourceRows[0].time;
-  const sourceOldest = sourceRows[sourceRows.length - 1].time;
-  const referenceNewest = referenceRows[0].time;
-  const referenceOldest = referenceRows[referenceRows.length - 1].time;
-
-  const overlapStart = max(sourceOldest, referenceOldest);
-  const overlapEnd = min(sourceNewest, referenceNewest);
-  if (overlapEnd <= overlapStart) return sourceRows;
-
-  const sourceMean = averageRowsInRange(sourceRows, valueKey, overlapStart, overlapEnd);
-  const referenceMean = averageRowsInRange(referenceRows, valueKey, overlapStart, overlapEnd);
-  if (sourceMean === null || referenceMean === null) return sourceRows;
-
-  const offset = referenceMean - sourceMean;
-  const calibrated = new Array(sourceRows.length);
-  for (let i = 0; i < sourceRows.length; i++) {
-    calibrated[i] = {
-      ...sourceRows[i],
-      [valueKey]: sourceRows[i][valueKey] + offset
-    };
-  }
-
-  return calibrated;
-}
-
-function boundaryWindowMeanForKey(rows, boundaryTime, windowYears, side, valueKey) {
-  if (!Number.isFinite(boundaryTime) || !Number.isFinite(windowYears) || windowYears <= 0) return null;
-
-  let startTime = boundaryTime - windowYears;
-  let endTime = boundaryTime + windowYears;
-
-  if (side === 'older') {
-    startTime = boundaryTime - windowYears;
-    endTime = boundaryTime;
-  } else if (side === 'newer') {
-    startTime = boundaryTime;
-    endTime = boundaryTime + windowYears;
-  }
-
-  return averageRowsInRange(rows, valueKey, startTime, endTime);
-}
-
-function calibrateRowsToReferenceByBoundary(sourceRows, referenceRows, valueKey, windowYears = 30) {
-  if (sourceRows.length === 0 || referenceRows.length === 0) return sourceRows;
-
-  const boundaryTime = referenceRows[referenceRows.length - 1].time;
-  const sourceMean = boundaryWindowMeanForKey(sourceRows, boundaryTime, windowYears, 'older', valueKey);
-  const referenceMean = boundaryWindowMeanForKey(referenceRows, boundaryTime, windowYears, 'newer', valueKey);
-  if (sourceMean === null || referenceMean === null) return sourceRows;
-
-  const offset = referenceMean - sourceMean;
-  const calibrated = new Array(sourceRows.length);
-  for (let i = 0; i < sourceRows.length; i++) {
-    calibrated[i] = {
-      ...sourceRows[i],
-      [valueKey]: sourceRows[i][valueKey] + offset
-    };
-  }
-
-  return calibrated;
-}
-
-function calibrateRowsToReferenceByBoundaryWithVariability(
-  sourceRows,
-  referenceRows,
-  valueKey,
-  windowYears = 30,
-  minScale = 0.15,
-  maxScale = 3.0
-) {
-  if (sourceRows.length === 0 || referenceRows.length === 0) return sourceRows;
-
-  const boundaryTime = referenceRows[referenceRows.length - 1].time;
-  if (!Number.isFinite(boundaryTime)) return sourceRows;
-
-  const sourceStats = rowStatsInRange(sourceRows, valueKey, boundaryTime - windowYears, boundaryTime);
-  const referenceStats = rowStatsInRange(referenceRows, valueKey, boundaryTime, boundaryTime + windowYears);
-  if (!sourceStats || !referenceStats) return sourceRows;
-
-  let scale = 1;
-  if (sourceStats.std > 0 && referenceStats.std > 0) {
-    scale = referenceStats.std / sourceStats.std;
-  }
-
-  scale = constrain(scale, minScale, maxScale);
-  const offset = referenceStats.mean - (sourceStats.mean * scale);
-
-  const calibrated = new Array(sourceRows.length);
-  for (let i = 0; i < sourceRows.length; i++) {
-    calibrated[i] = {
-      ...sourceRows[i],
-      [valueKey]: sourceRows[i][valueKey] * scale + offset
-    };
-  }
-
-  return calibrated;
+function offsetValueRows(rows, valueKey, offset) {
+  return rows.map(row => ({ ...row, [valueKey]: row[valueKey] + offset,
+    lower: Number.isFinite(row.lower) ? row.lower + offset : undefined,
+    upper: Number.isFinite(row.upper) ? row.upper + offset : undefined }));
 }
 
 function parseGissTemperatureRows(rawLines) {
@@ -389,14 +311,16 @@ function parseNeukomTemperatureRows(rawLines) {
 
     rows.push({
       time: yearCe - 1950,
-      temperature: median
+      temperature: median,
+      lower: parseFloat(tokens[3]),
+      upper: parseFloat(tokens[4])
     });
   }
 
   return sortRowsByTimeDesc(rows);
 }
 
-function parseEdcTemperatureRows(rawLines) {
+function parseOsmanTemperatureRows(rawLines) {
   const rows = [];
   if (!rawLines || rawLines.length === 0) return rows;
 
@@ -404,17 +328,15 @@ function parseEdcTemperatureRows(rawLines) {
     const line = rawLines[i].trim();
     if (line.length === 0 || line.startsWith('#')) continue;
 
-    const tokens = line.split(/\s+/);
-    if (tokens.length < 5) continue;
-    if (tokens[0] === 'Bag') continue;
-
-    const ageCalBp = parseFloat(tokens[2]);
-    const temperature = parseFloat(tokens[4]);
-    if (!Number.isFinite(ageCalBp) || !Number.isFinite(temperature)) continue;
+    const values = line.split(',').map(Number);
+    if (values.length !== 3 || !values.every(Number.isFinite)) continue;
+    const [ageCalBp, temperature, standardDeviation] = values;
 
     rows.push({
       time: -ageCalBp,
-      temperature
+      temperature,
+      lower: temperature - standardDeviation,
+      upper: temperature + standardDeviation
     });
   }
 
@@ -449,103 +371,51 @@ function parseTemperatureTableRows(table) {
   return extractTimeValueRows(table, 'Temperature', 'temperature');
 }
 
-function averageTemperatureInRange(rows, startTime, endTime) {
-  return averageRowsInRange(rows, 'temperature', startTime, endTime);
+// All offsets change the reference level only. They never change variability.
+// Hansen's published absolute scale assigns 14 °C to 1961–1990.
+// Osman is aligned over eight complete 200-year bins (150–1750 CE),
+// comparing each bin with the same years of PAGES2k before averaging.
+function buildCombinedTemperatureTable(gissRows, pagesRows, osmanRows, hansenRows) {
+  const gissReference = gissRows.filter(row => row.time >= 11 && row.time < 41);
+  if (gissReference.length !== 360) throw new Error('GISS requires all 360 months of the 1961–1990 reference period');
+  const gissOffset = gissReference.reduce((sum, row) => sum + row.temperature, 0) / gissReference.length;
+  const overlapBins = osmanRows.filter(row => row.time >= -1700 && row.time <= -300);
+  if (overlapBins.length !== 8) throw new Error('Osman requires eight complete overlap bins');
+  const binOffsets = overlapBins.map(bin => {
+    const target = pagesRows.filter(row => row.time >= bin.time - 100 && row.time < bin.time + 100);
+    if (target.length !== 200) throw new Error('PAGES2k requires complete 150–1750 CE overlap coverage');
+    return target.reduce((sum, row) => sum + row.temperature, 0) / target.length - bin.temperature;
+  });
+  const osmanOffset = binOffsets.reduce((sum, value) => sum + value, 0) / binOffsets.length;
+  temperatureCalibration = { gissOffset, osmanOffset, hansenReference: 14, overlap: '150–1750 CE' };
+
+  const rows = [];
+  function append(sourceRows, source, offset, include, uncertainty = '') {
+    for (const row of sourceRows) {
+      if (!include(row.time)) continue;
+      rows.push({ ...row, source, uncertainty,
+        temperature: row.temperature + offset,
+        lower: Number.isFinite(row.lower) ? row.lower + offset : undefined,
+        upper: Number.isFinite(row.upper) ? row.upper + offset : undefined });
+    }
+  }
+  append(gissRows, 'giss', -gissOffset, time => time >= -70);
+  append(pagesRows, 'pages', 0, time => time >= -1949 && time < -70, '95% ensemble range');
+  append(osmanRows, 'osman', osmanOffset, time => time < -1949, '±1σ ensemble spread');
+  append(hansenRows, 'hansen', -14, time => time < -24000);
+  sortRowsByTimeDesc(rows);
+  const table = buildTimeValueTable(rows, 'temperature', 'Temperature');
+  table.temperatureRows = rows; // Keep provenance and uncertainty with each plotted sample.
+  return table;
 }
 
-function calibrateTemperatureRowsToReference(sourceRows, referenceRows) {
-  return calibrateRowsToReferenceByOverlap(sourceRows, referenceRows, 'temperature');
-}
-
-function mergeTemperatureTableWithHansen(baseTable, hansenRawLines) {
-  const hansenRows = parseHansenTemperatureRows(hansenRawLines);
-  if (hansenRows.length === 0) return baseTable;
-
-  const baseRows = parseTemperatureTableRows(baseTable);
-  const newestHansenTime = hansenRows[0].time;
-  const oldestHansenTime = hansenRows[hansenRows.length - 1].time;
-  const mergedRows = cloneTimeValueRows(hansenRows, 'temperature');
-  appendRowsOutsideInclusiveRange(mergedRows, baseRows, 'temperature', newestHansenTime, oldestHansenTime);
-
-  sortRowsByTimeDesc(mergedRows);
-  return buildTimeValueTable(mergedRows, 'temperature', 'Temperature', baseTable);
-}
-
-function mergeTemperatureTableWithEdc(baseTable, edcRawLines) {
-  const edcRows = parseEdcTemperatureRows(edcRawLines);
-  if (edcRows.length === 0) return baseTable;
-
-  const baseRows = parseTemperatureTableRows(baseTable);
-  const calibratedBaseRows = calibrateTemperatureRowsToReference(baseRows, edcRows);
-
-  const newestEdcTime = edcRows[0].time;
-  const oldestEdcTime = edcRows[edcRows.length - 1].time;
-  const mergedRows = cloneTimeValueRows(edcRows, 'temperature');
-  appendRowsOutsideInclusiveRange(mergedRows, calibratedBaseRows, 'temperature', newestEdcTime, oldestEdcTime);
-
-  sortRowsByTimeDesc(mergedRows);
-  return buildTimeValueTable(mergedRows, 'temperature', 'Temperature', baseTable);
-}
-
-function mergeTemperatureTableWithNeukom(baseTable, neukomRawLines) {
-  const neukomRows = parseNeukomTemperatureRows(neukomRawLines);
-  if (neukomRows.length === 0) return baseTable;
-
-  const baseRows = parseTemperatureTableRows(baseTable);
-  const calibratedBaseRows = TEMPERATURE_VARIABILITY_MATCH_ENABLED
-    ? calibrateRowsToReferenceByBoundaryWithVariability(
-      baseRows,
-      neukomRows,
-      'temperature',
-      TEMPERATURE_NEUKOM_MATCH_WINDOW_YEARS,
-      TEMPERATURE_VARIABILITY_MIN_SCALE,
-      TEMPERATURE_VARIABILITY_MAX_SCALE
-    )
-    : baseRows;
-  const newestNeukomTime = neukomRows[0].time;
-  const oldestNeukomTime = neukomRows[neukomRows.length - 1].time;
-  const mergedRows = cloneTimeValueRows(neukomRows, 'temperature');
-  appendRowsOutsideInclusiveRange(mergedRows, calibratedBaseRows, 'temperature', newestNeukomTime, oldestNeukomTime);
-
-  sortRowsByTimeDesc(mergedRows);
-  return buildTimeValueTable(mergedRows, 'temperature', 'Temperature', baseTable);
-}
-
-function mergeTemperatureTableWithGiss(paleoTable, gissRawLines) {
-  const mergedTable = new p5.Table();
-  mergedTable.addColumn('time');
-  mergedTable.addColumn('Temperature');
-
-  const modernStartTime = -70; // 1880 CE in the project's 1950-based axis
-  const gissRows = parseGissTemperatureRows(gissRawLines);
-  const paleoRows = parseTemperatureTableRows(paleoTable);
-  const calibratedPaleoRows = calibrateRowsToReferenceByBoundary(
-    paleoRows,
-    gissRows,
-    'temperature',
-    TEMPERATURE_GISS_MATCH_WINDOW_YEARS
+function rebuildCombinedTemperature() {
+  sourceTables.temperature = buildCombinedTemperatureTable(
+    parseTemperatureTableRows(sourceTables.gissTemperature),
+    parseNeukomTemperatureRows(sourceTables.neukomTempRaw),
+    parseOsmanTemperatureRows(sourceTables.osmanTempRaw),
+    parseHansenTemperatureRows(sourceTables.hansenTempRaw)
   );
-
-  for (let i = 0; i < gissRows.length; i++) {
-    const row = mergedTable.addRow();
-    row.setNum('time', gissRows[i].time);
-    row.setNum('Temperature', gissRows[i].temperature);
-  }
-
-  for (let i = 0; i < calibratedPaleoRows.length; i++) {
-    const timeValue = calibratedPaleoRows[i].time;
-    const tempValue = calibratedPaleoRows[i].temperature;
-
-    if (!Number.isFinite(timeValue) || !Number.isFinite(tempValue)) continue;
-    if (timeValue >= modernStartTime) continue;
-
-    const row = mergedTable.addRow();
-    row.setNum('time', timeValue);
-    row.setNum('Temperature', tempValue);
-  }
-
-  if (mergedTable.getRowCount() > 0) return mergedTable;
-  return paleoTable;
 }
 
 function mergeRecentTemperatureRows(baseTable, remoteRows, recentWindowYears) {
@@ -566,27 +436,35 @@ function mergeRecentRowsByWindow(baseTable, remoteRows, recentWindowYears, extra
   if (baseRows.length === 0) return baseTable;
 
   const newestBaseTime = baseRows[0].time;
+  // A stale download must not roll back the observations already bundled locally.
+  const newestRemoteTime = remoteRows.reduce((newest, row) => max(newest, row.time), Number.NEGATIVE_INFINITY);
+  if (newestRemoteTime < newestBaseTime - 0.25) return baseTable;
   const cutoffTime = newestBaseTime - recentWindowYears;
-  const mergedRows = [];
-
-  for (let i = 0; i < baseRows.length; i++) {
-    if (baseRows[i].time >= cutoffTime) continue;
-    mergedRows.push({
-      time: baseRows[i].time,
-      [valueKey]: baseRows[i][valueKey]
-    });
+  // Replace matching timestamps, retaining local observations absent from a
+  // partial remote response. Rounding absorbs harmless date-format differences.
+  const timeKey = (time) => Math.round(time * 10000);
+  // Historical proxy compilations can contain several estimates at the same
+  // age. A modern refresh must preserve all of them, rather than deduplicating
+  // the entire composite by timestamp.
+  const historical = baseRows.filter(row => row.time < cutoffTime);
+  const byTime = new Map(baseRows.filter(row => row.time >= cutoffTime).map((row) => [timeKey(row.time), row]));
+  for (const row of remoteRows) {
+    if (!Number.isFinite(row.time) || !Number.isFinite(row[valueKey]) || row.time < cutoffTime) continue;
+    byTime.set(timeKey(row.time), { ...byTime.get(timeKey(row.time)), ...row });
   }
-
-  for (let i = 0; i < remoteRows.length; i++) {
-    if (remoteRows[i].time < cutoffTime) continue;
-    mergedRows.push({
-      time: remoteRows[i].time,
-      [valueKey]: remoteRows[i][valueKey]
-    });
-  }
-
-  sortRowsByTimeDesc(mergedRows);
+  const mergedRows = sortRowsByTimeDesc([...byTime.values(), ...historical]);
   return buildTimeValueTable(mergedRows, valueKey, valueColumn, baseTable);
+}
+
+function updateDataset(columnY, table) {
+  const index = data.findIndex((series) => series.columnY === columnY);
+  if (index < 0) return;
+  const old = data[index];
+  const updated = new Data(table, old.columnX, old.columnY, old.unit,
+    old.position, old.c, old.type, old.yScrolling, old.displayName);
+  updated.rectY = old.rectY;
+  data[index] = updated;
+  redrawRequested = true;
 }
 
 function mergeRecentCo2Rows(baseTable, remoteRows, recentWindowYears) {
@@ -659,16 +537,14 @@ async function refreshTemperatureWithRemoteGiss() {
     urlCandidates: GISS_REMOTE_URL_CANDIDATES,
     parseRows: (rawText) => parseGissTemperatureRows(rawText.split(/\r?\n/)),
     applyRows: (remoteRows) => {
-      sourceTables.temperature = mergeRecentTemperatureRows(
-        sourceTables.temperature,
+      sourceTables.gissTemperature = mergeRecentTemperatureRows(
+        sourceTables.gissTemperature,
         remoteRows,
         GISS_REMOTE_UPDATE_WINDOW_YEARS
       );
 
-      if (data.length > 0 && data[0] && data[0].columnY === 'Temperature') {
-        data[0] = new Data(sourceTables.temperature, 'time', 'Temperature', '°C', 0, color(255), 0, true);
-        pScrollValue = -1;
-      }
+      rebuildCombinedTemperature();
+      updateDataset('Temperature', sourceTables.temperature);
     },
     setStatus: (status) => { gissRefreshStatus = status; },
     setSource: (source) => { gissRefreshSource = source; },
@@ -688,12 +564,7 @@ async function refreshCo2WithRemoteNoaaDaily() {
         CO2_REMOTE_UPDATE_WINDOW_YEARS
       );
 
-      for (let j = 0; j < data.length; j++) {
-        if (data[j].columnY !== 'CO2') continue;
-        data[j] = new Data(sourceTables.co2, 'time', 'CO2', 'ppm', 1, color(255, 128, 64), 0, true);
-        pScrollValue = -1;
-        break;
-      }
+      updateDataset('CO2', sourceTables.co2);
     },
     setStatus: (status) => { co2RefreshStatus = status; },
     setSource: (source) => { co2RefreshSource = source; },
@@ -707,18 +578,18 @@ async function refreshSealevelWithRemoteColorado() {
     urlCandidates: SEALEVEL_REMOTE_URL_CANDIDATES,
     parseRows: (rawText) => parseColoradoSeaLevelRows(rawText.split(/\r?\n/)),
     applyRows: (remoteRows) => {
-      sourceTables.sealevel = mergeRecentSealevelRows(
-        sourceTables.sealevel,
+      sourceTables.coloradoSealevel = mergeRecentSealevelRows(
+        sourceTables.coloradoSealevel,
         remoteRows,
         SEALEVEL_REMOTE_UPDATE_WINDOW_YEARS
       );
 
-      for (let j = 0; j < data.length; j++) {
-        if (data[j].columnY !== 'Sealevel') continue;
-        data[j] = new Data(sourceTables.sealevel, 'time', 'Sealevel', 'm', 1, color(0, 128, 255), 0, true);
-        pScrollValue = -1;
-        break;
-      }
+      sourceTables.sealevel = buildCombinedSeaLevelTable(
+        parseSeaLevelTableRows(sourceTables.coloradoSealevel),
+        parseGp2014SeaLevelRows(sourceTables.sealevelGpRaw),
+        parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw)
+      );
+      updateDataset('Sealevel', sourceTables.sealevel);
     },
     setStatus: (status) => { sealevelRefreshStatus = status; },
     setSource: (source) => { sealevelRefreshSource = source; },
@@ -732,14 +603,13 @@ async function refreshSolarWithRemoteTsis() {
     urlCandidates: SOLAR_REMOTE_TSIS_URL_CANDIDATES,
     parseRows: (rawText) => parseTsisSolarRows(rawText.split(/\r?\n/)),
     applyRows: (remoteRows) => {
-      sourceTables.solarIrradiance = mergeSolarTableWithTsisRows(sourceTables.solarIrradiance, remoteRows);
-
-      for (let j = 0; j < data.length; j++) {
-        if (data[j].columnY !== 'Solar Irradiance') continue;
-        data[j] = new Data(sourceTables.solarIrradiance, 'time', 'Solar Irradiance', 'W/m²', 1, color(255, 220, 0), 0, true);
-        pScrollValue = -1;
-        break;
-      }
+      const observations = mergeTsisObservations(sourceTables.solarTsisRows, remoteRows);
+      sourceTables.solarIrradiance = mergeSolarTableWithNnlAndTsis(
+        sourceTables.solarBase, sourceTables.solarIrradianceNnlRaw,
+        sourceTables.solarIrradianceTsisRaw, observations
+      );
+      sourceTables.solarTsisRows = observations;
+      updateDataset('Solar Irradiance', sourceTables.solarIrradiance);
     },
     setStatus: (status) => { solarRefreshStatus = status; },
     setSource: (source) => { solarRefreshSource = source; },
@@ -772,7 +642,8 @@ function parseNoaaDailyCo2Rows(rawLines) {
 
     rows.push({
       time: decimalYear - 1950,
-      co2: ppm
+      co2: ppm, source: 'co2-noaa',
+      sampleDate: tokens.slice(0, 3).map((value, index) => value.padStart(index === 0 ? 4 : 2, '0')).join('-')
     });
   }
 
@@ -798,52 +669,33 @@ function parseAntarcticaCompositeCo2Rows(rawLines) {
 
     rows.push({
       time: -ageGasCalBp,
-      co2: co2Ppm
+      co2: co2Ppm, source: 'co2-ice',
+      lower: co2Ppm - parseFloat(tokens[2]), upper: co2Ppm + parseFloat(tokens[2]),
+      uncertainty: '±1σ measurement uncertainty'
     });
   }
 
   return sortRowsByTimeDesc(rows);
 }
 
-function buildCo2TableFromAntarcticaComposite(rawLines) {
-  const rows = parseAntarcticaCompositeCo2Rows(rawLines);
-  return buildTimeValueTable(rows, 'co2', 'CO2');
-}
-
-function parseRaeD11bCo2Rows(rawLines) {
+function parseCencopipCo2Rows(rawLines) {
   const rows = [];
-  if (!rawLines || rawLines.length === 0) return rows;
-
-  let ageIdx = -1;
-  let xco2Idx = -1;
-
-  for (let i = 0; i < rawLines.length; i++) {
-    const line = rawLines[i].trim();
-    if (line.length === 0 || line.startsWith('#')) continue;
-
-    const tokens = line.split(/\s+/);
-    if (tokens.length < 2) continue;
-
-    if (tokens[0] === 'site') {
-      ageIdx = tokens.indexOf('age');
-      xco2Idx = tokens.indexOf('xco2');
-      continue;
-    }
-
-    if (ageIdx < 0 || xco2Idx < 0) continue;
-    if (tokens.length <= max(ageIdx, xco2Idx)) continue;
-
-    const ageKyrBp = parseFloat(tokens[ageIdx]);
-    const xco2 = parseFloat(tokens[xco2Idx]);
-    if (!Number.isFinite(ageKyrBp) || !Number.isFinite(xco2)) continue;
-    if (xco2 <= 0) continue;
-
+  for (const line of rawLines || []) {
+    const tokens = line.trim().split(',').map(token => token.replaceAll('"', ''));
+    if (tokens.length !== 6) continue;
+    if ([tokens[0], tokens[1], tokens[3], tokens[5]].some(token => token.trim() === '')) continue;
+    const [ageMa, logLower, , logMedian, , logUpper] = tokens.map(Number);
+    // The author's plotting code trims the first four bins to the Cenozoic.
+    // All output quantiles are natural logarithms of ppm, not ppm themselves.
+    if (!Number.isFinite(ageMa) || ageMa < 0 || ageMa > 66) continue;
+    const [lower, co2, upper] = [logLower, logMedian, logUpper].map(Math.exp);
+    if (![lower, co2, upper].every(Number.isFinite) || lower <= 0 || lower > co2 || co2 > upper) continue;
     rows.push({
-      time: -ageKyrBp * 1000.0,
-      co2: xco2
+      time: -ageMa * 1000000, co2, lower, upper, source: 'co2-cencopip', band: true,
+      uncertainty: '95% credible interval for the 500,000-year mean',
+      note: 'Bin midpoint; line connects 500,000-year averages'
     });
   }
-
   return sortRowsByTimeDesc(rows);
 }
 
@@ -851,164 +703,24 @@ function parseCo2TableRows(table) {
   return extractTimeValueRows(table, 'CO2', 'co2');
 }
 
-function hasCo2PointNearTime(rows, targetTime, toleranceYears) {
-  if (!Number.isFinite(toleranceYears) || toleranceYears <= 0) return false;
-
-  for (let i = 0; i < rows.length; i++) {
-    if (abs(rows[i].time - targetTime) <= toleranceYears) return true;
-  }
-
-  return false;
+function buildCombinedCo2Table() {
+  const ice = parseAntarcticaCompositeCo2Rows(sourceTables.co2AntarcticaRaw);
+  const noaa = parseNoaaDailyCo2Rows(sourceTables.co2DailyRaw);
+  const scripps = parseScrippsDailyCo2Rows(sourceTables.co2InSituRaw);
+  const oldestIce = ice.length ? ice.at(-1).time : Infinity;
+  const oldestNoaa = noaa.length ? noaa.at(-1).time : Infinity;
+  const modern = [...noaa, ...scripps.filter(row => row.time < oldestNoaa)];
+  const oldestModern = modern.length ? Math.min(...modern.map(row => row.time)) : Infinity;
+  const reconstruction = parseCencopipCo2Rows(sourceTables.co2CencopipRaw)
+    .filter(row => row.time < oldestIce);
+  // Use the published synthesis for deep time. Prefer ice-core samples over
+  // overlapping bins, without adding an endpoint or connecting across sources.
+  return buildTimeValueTable(sortRowsByTimeDesc([
+    ...modern, ...ice.filter(row => row.time < oldestModern), ...reconstruction
+  ]), 'co2', 'CO2');
 }
 
-function mergeCo2TableWithRaeD11b(baseTable, raeRawLines, fillBeforeTime = Number.NEGATIVE_INFINITY, holeToleranceYears = 0) {
-  const raeRows = parseRaeD11bCo2Rows(raeRawLines);
-  if (raeRows.length === 0) return baseTable;
 
-  const baseRows = parseCo2TableRows(baseTable);
-  if (baseRows.length === 0) {
-    const filteredRows = [];
-
-    for (let i = 0; i < raeRows.length; i++) {
-      if (raeRows[i].time > fillBeforeTime) continue;
-
-      filteredRows.push({
-        time: raeRows[i].time,
-        co2: raeRows[i].co2
-      });
-    }
-
-    return buildTimeValueTable(filteredRows, 'co2', 'CO2', baseTable);
-  }
-  const mergedRows = cloneTimeValueRows(baseRows, 'co2');
-
-  for (let i = 0; i < raeRows.length; i++) {
-    const timeValue = raeRows[i].time;
-    if (timeValue > fillBeforeTime) continue;
-    if (hasCo2PointNearTime(baseRows, timeValue, holeToleranceYears)) continue;
-
-    mergedRows.push({
-      time: timeValue,
-      co2: raeRows[i].co2
-    });
-  }
-
-  sortRowsByTimeDesc(mergedRows);
-  return buildTimeValueTable(mergedRows, 'co2', 'CO2', baseTable);
-}
-
-function parseRaeAlkenoneCo2Rows(rawLines) {
-  const rows = [];
-  if (!rawLines || rawLines.length === 0) return rows;
-
-  let ageIdx = -1;
-  let co2Idx = -1;
-
-  for (let i = 0; i < rawLines.length; i++) {
-    const line = rawLines[i].trim();
-    if (line.length === 0 || line.startsWith('#')) continue;
-
-    const tokens = line.split(/\s+/);
-    if (tokens.length < 2) continue;
-
-    if (tokens[0] === 'site') {
-      ageIdx = tokens.indexOf('age');
-      co2Idx = tokens.indexOf('co2_benthic');
-      if (co2Idx < 0) co2Idx = tokens.indexOf('co2');
-      continue;
-    }
-
-    if (ageIdx < 0 || co2Idx < 0) continue;
-    if (tokens.length <= max(ageIdx, co2Idx)) continue;
-
-    const ageKyrBp = parseFloat(tokens[ageIdx]);
-    const co2Ppm = parseFloat(tokens[co2Idx]);
-    if (!Number.isFinite(ageKyrBp) || !Number.isFinite(co2Ppm)) continue;
-    if (co2Ppm <= 0) continue;
-
-    rows.push({
-      time: -ageKyrBp * 1000.0,
-      co2: co2Ppm
-    });
-  }
-
-  return sortRowsByTimeDesc(rows);
-}
-
-function mergeCo2TableWithRaeAlkenone(baseTable, alkenoneRawLines, antarcticaRawLines) {
-  const alkenoneRows = parseRaeAlkenoneCo2Rows(alkenoneRawLines);
-  if (alkenoneRows.length === 0) return baseTable;
-
-  const antarcticaRows = parseAntarcticaCompositeCo2Rows(antarcticaRawLines);
-  const hasAntarcticaRange = antarcticaRows.length > 0;
-  const newestAntarcticaTime = hasAntarcticaRange ? antarcticaRows[0].time : Number.NEGATIVE_INFINITY;
-  const oldestAntarcticaTime = hasAntarcticaRange ? antarcticaRows[antarcticaRows.length - 1].time : Number.POSITIVE_INFINITY;
-
-  const baseRows = parseCo2TableRows(baseTable);
-  const mergedRows = cloneTimeValueRows(baseRows, 'co2');
-  appendRowsOutsideInclusiveRange(mergedRows, alkenoneRows, 'co2', newestAntarcticaTime, oldestAntarcticaTime);
-
-  sortRowsByTimeDesc(mergedRows);
-  return buildTimeValueTable(mergedRows, 'co2', 'CO2', baseTable);
-}
-
-function parseTripatiCo2Rows(rawLines) {
-  const rows = [];
-  if (!rawLines || rawLines.length === 0) return rows;
-
-  let ageIdx = -1;
-  let co2Idx = -1;
-
-  for (let i = 0; i < rawLines.length; i++) {
-    const line = rawLines[i];
-    if (!line || line.trim().length === 0) continue;
-
-    const trimmed = line.trimStart();
-    if (trimmed.startsWith('#')) continue;
-
-    if ((ageIdx < 0 || co2Idx < 0) && trimmed.startsWith('proxy')) {
-      const headerTokens = trimmed.split('\t');
-      ageIdx = headerTokens.indexOf('age_ka');
-      co2Idx = headerTokens.indexOf('CO2_ppm');
-      continue;
-    }
-
-    if (!trimmed.startsWith('B/Ca')) continue;
-    if (ageIdx < 0 || co2Idx < 0) continue;
-
-    const tokens = trimmed.split('\t');
-    if (tokens.length <= max(ageIdx, co2Idx)) continue;
-
-    const ageKa = parseFloat(tokens[ageIdx]);
-    const co2Ppm = parseFloat(tokens[co2Idx]);
-    if (!Number.isFinite(ageKa) || !Number.isFinite(co2Ppm)) continue;
-    if (co2Ppm <= 0) continue;
-
-    rows.push({
-      time: -ageKa * 1000.0,
-      co2: co2Ppm
-    });
-  }
-
-  return sortRowsByTimeDesc(rows);
-}
-
-function mergeCo2TableWithTripati(baseTable, tripatiRawLines, antarcticaRawLines) {
-  const tripatiRows = parseTripatiCo2Rows(tripatiRawLines);
-  if (tripatiRows.length === 0) return baseTable;
-
-  const antarcticaRows = parseAntarcticaCompositeCo2Rows(antarcticaRawLines);
-  const hasAntarcticaRange = antarcticaRows.length > 0;
-  const newestAntarcticaTime = hasAntarcticaRange ? antarcticaRows[0].time : Number.NEGATIVE_INFINITY;
-  const oldestAntarcticaTime = hasAntarcticaRange ? antarcticaRows[antarcticaRows.length - 1].time : Number.POSITIVE_INFINITY;
-
-  const baseRows = parseCo2TableRows(baseTable);
-  const mergedRows = cloneTimeValueRows(baseRows, 'co2');
-  appendRowsOutsideInclusiveRange(mergedRows, tripatiRows, 'co2', newestAntarcticaTime, oldestAntarcticaTime);
-
-  sortRowsByTimeDesc(mergedRows);
-  return buildTimeValueTable(mergedRows, 'co2', 'CO2', baseTable);
-}
 
 function decimalYearFromYmd(yearValue, monthValue, dayValue) {
   const dateValue = new Date(Date.UTC(yearValue, monthValue - 1, dayValue));
@@ -1023,7 +735,7 @@ function decimalYearFromYmd(yearValue, monthValue, dayValue) {
   return yearValue + (elapsed / total);
 }
 
-function parseNoaaInSituDailyCo2Rows(rawLines) {
+function parseScrippsDailyCo2Rows(rawLines) {
   const rows = [];
   if (!rawLines || rawLines.length === 0) return rows;
 
@@ -1046,53 +758,15 @@ function parseNoaaInSituDailyCo2Rows(rawLines) {
 
     rows.push({
       time: decimalYear - 1950,
-      co2: ppm
+      co2: ppm, source: 'co2-scripps', station: tokens[6],
+      sampleDate: [yearValue, monthValue, dayValue].map((value, index) => String(value).padStart(index === 0 ? 4 : 2, '0')).join('-')
     });
   }
 
   return sortRowsByTimeDesc(rows);
 }
 
-function mergeCo2TableWithNoaaDaily(paleoTable, noaaRawLines, inSituRawLines) {
-  const mergedTable = new p5.Table();
-  mergedTable.addColumn('time');
-  mergedTable.addColumn('CO2');
 
-  const noaaRows = parseNoaaDailyCo2Rows(noaaRawLines);
-  const inSituRows = parseNoaaInSituDailyCo2Rows(inSituRawLines);
-  const modernRows = noaaRows.slice();
-  const oldestNoaaTime = noaaRows.length > 0 ? noaaRows[noaaRows.length - 1].time : Number.POSITIVE_INFINITY;
-
-  for (let i = 0; i < inSituRows.length; i++) {
-    if (oldestNoaaTime !== Number.POSITIVE_INFINITY && inSituRows[i].time >= oldestNoaaTime) continue;
-    modernRows.push(inSituRows[i]);
-  }
-
-  modernRows.sort((a, b) => b.time - a.time);
-  const modernStartTime = modernRows.length > 0 ? modernRows[modernRows.length - 1].time : Number.POSITIVE_INFINITY;
-
-  for (let i = 0; i < modernRows.length; i++) {
-    const row = mergedTable.addRow();
-    row.setNum('time', modernRows[i].time);
-    row.setNum('CO2', modernRows[i].co2);
-  }
-
-  for (let i = 0; i < paleoTable.getRowCount(); i++) {
-    const sourceRow = paleoTable.getRow(i);
-    const timeValue = sourceRow.getNum('time');
-    const co2Value = sourceRow.getNum('CO2');
-
-    if (!Number.isFinite(timeValue) || !Number.isFinite(co2Value)) continue;
-    if (timeValue >= modernStartTime) continue;
-
-    const row = mergedTable.addRow();
-    row.setNum('time', timeValue);
-    row.setNum('CO2', co2Value);
-  }
-
-  if (mergedTable.getRowCount() > 0) return mergedTable;
-  return paleoTable;
-}
 
 function parseVolcanicSaodRows(rawLines) {
   const rows = [];
@@ -1113,7 +787,8 @@ function parseVolcanicSaodRows(rawLines) {
 
     rows.push({
       time: year - 1950,
-      saod
+      saod, source: year < -500 ? 'volcano-holvol' : year < 1901 ? 'volcano-evolv2k' : 'volcano-cmip6',
+      maxGapYears: 1.5
     });
   }
 
@@ -1125,7 +800,7 @@ function buildVolcanicSaodTable(rawLines, fallbackTable = null) {
   return buildTimeValueTable(saodRows, 'saod', 'Volcanic Activity', fallbackTable);
 }
 
-function parseZeebeOrbitalRows(rawLines, modernOffset) {
+function parseZeebeOrbitalRows(rawLines) {
   const rows = [];
   if (!rawLines || rawLines.length === 0) return rows;
 
@@ -1140,21 +815,23 @@ function parseZeebeOrbitalRows(rawLines, modernOffset) {
     const ageKyr = parseFloat(tokens[0]);
     const eccentricity = parseFloat(tokens[1]);
     if (!Number.isFinite(ageKyr) || !Number.isFinite(eccentricity)) continue;
+    if (ageKyr > 58000) continue; // The provider cautions that older orbital phase is unconstrained.
 
-    let time = -ageKyr * 1000.0;
-    if (ageKyr === 0) time = modernOffset;
+    // The original astronomical solution is relative to J2000, despite the
+    // archive's generic BP label. Convert every sample to the common 1950 axis.
+    const time = ORBITAL_EPOCH_CE - 1950 - ageKyr * 1000.0;
 
     rows.push({
       time,
-      eccentricity
+      eccentricity, source: 'orbit-zeebe'
     });
   }
 
   return sortRowsByTimeDesc(rows);
 }
 
-function buildEarthOrbitTableFromZeebe(rawLines, modernOffset) {
-  const rows = parseZeebeOrbitalRows(rawLines, modernOffset);
+function buildEarthOrbitTableFromZeebe(rawLines) {
+  const rows = parseZeebeOrbitalRows(rawLines);
   return buildTimeValueTable(rows, 'eccentricity', 'Eccentricity');
 }
 
@@ -1225,7 +902,8 @@ function parseWorldPopulationRows(rawLines, maxYearInclusive) {
 
     rows.push({
       time: yearValue - 1950,
-      population
+      population, source: Number.isFinite(historicalValue) ? 'population-history' : 'population-projection',
+      mode: Number.isFinite(historicalValue) ? 'line' : 'projection'
     });
   }
 
@@ -1254,7 +932,7 @@ function parseColoradoSeaLevelRows(rawLines) {
 
     rows.push({
       time: decimalYear - 1950,
-      sealevel: seaLevelMm / 1000.0
+      sealevel: seaLevelMm / 1000.0, source: 'sea-satellite', maxGapYears: 0.25
     });
   }
 
@@ -1278,43 +956,11 @@ function parseGp2014SeaLevelRows(rawLines) {
 
     rows.push({
       time: decimalYear - 1950,
-      sealevel: gslMm / 1000.0
+      sealevel: gslMm / 1000.0, source: 'sea-gauges', maxGapYears: 0.25,
+      lower: (gslMm - parseFloat(tokens[4])) / 1000,
+      upper: (gslMm + parseFloat(tokens[4])) / 1000, uncertainty: 'published reconstruction error'
     });
   }
-
-  return sortRowsByTimeDesc(rows);
-}
-
-function parseKopp2016GlobalSeaLevelRows(rawLines) {
-  const groupedByAge = new Map();
-  if (!rawLines || rawLines.length === 0) return [];
-
-  for (let i = 0; i < rawLines.length; i++) {
-    const line = rawLines[i].trim();
-    if (line.length === 0 || line.startsWith('#')) continue;
-    if (line.startsWith('region\t')) continue;
-
-    const tokens = line.split(/\t+/);
-    if (tokens.length < 10) continue;
-
-    const rslMeters = parseFloat(tokens[6]);
-    const ageAd = parseFloat(tokens[9]);
-    if (!Number.isFinite(rslMeters) || !Number.isFinite(ageAd)) continue;
-
-    const time = ageAd - 1950;
-    const key = time.toString();
-    if (!groupedByAge.has(key)) groupedByAge.set(key, []);
-    groupedByAge.get(key).push(rslMeters);
-  }
-
-  const rows = [];
-  groupedByAge.forEach((values, key) => {
-    const time = parseFloat(key);
-    const sealevel = median(values);
-    if (!Number.isFinite(time) || !Number.isFinite(sealevel)) return;
-
-    rows.push({ time, sealevel });
-  });
 
   return sortRowsByTimeDesc(rows);
 }
@@ -1337,7 +983,8 @@ function parseMiller2024SeaLevelRows(rawLines) {
 
     rows.push({
       time: -ageKyBp * 1000.0,
-      sealevel: gmgslMeters
+      sealevel: gmgslMeters, source: 'sea-miller',
+      note: 'Approximate geological reference; uncertainty not quantified here'
     });
   }
 
@@ -1352,12 +999,96 @@ function parseSolarIrradianceTableRows(table) {
   return extractTimeValueRows(table, 'Solar Irradiance', 'irradiance');
 }
 
+function parsePmipSolarRows(table) {
+  return parseSolarIrradianceTableRows(table).map(row => {
+    const calendarYear = row.time + 1950;
+    const yearValue = Math.floor(calendarYear);
+    if (calendarYear < 1850) {
+      return { ...row, source: calendarYear < 1610 ? 'solar-satire-m' : 'solar-satire-t',
+        cadence: 'annual', sampleDate: Math.abs(yearValue) + (yearValue < 0 ? ' BCE' : ' CE') + ' • annual mean' };
+    }
+    // PMIP daily years are rounded to four decimals. The author reader rounds
+    // the day index; flooring the converted date can mislabel it one day early.
+    const start = Date.UTC(yearValue, 0, 1);
+    const daysInYear = (Date.UTC(yearValue + 1, 0, 1) - start) / 86400000;
+    const milliseconds = start + Math.round((calendarYear - yearValue) * daysInYear) * 86400000;
+    return { ...row, time: decimalYearFromMilliseconds(milliseconds) - 1950,
+      source: 'solar-cmip6', cadence: 'day', sampleDate: new Date(milliseconds).toISOString().slice(0, 10) };
+  });
+}
+
+function medianValue(values) {
+  if (!values.length) return null;
+  const sorted = values.slice().sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function pairedSolarOffset(sourceRows, referenceRows, start = -Infinity, end = Infinity) {
+  const dayKey = row => row.sampleDate?.match(/^\d{4}-\d{2}-\d{2}$/)
+    ? row.sampleDate : new Date(millisecondsFromDecimalYear(row.time + 1950)).toISOString().slice(0, 10);
+  const byDay = new Map();
+  for (const row of sourceRows) {
+    if (row.time >= start && row.time < end && !row.provisional) byDay.set(dayKey(row), row.irradiance);
+  }
+  const months = new Map();
+  for (const row of referenceRows) {
+    if (row.time < start || row.time >= end || row.provisional) continue;
+    const date = dayKey(row);
+    const source = byDay.get(date);
+    if (!Number.isFinite(source) || !Number.isFinite(row.irradiance)) continue;
+    const key = date.slice(0, 7);
+    const bin = months.get(key) || { sum: 0, count: 0, first: date, last: date };
+    bin.sum += row.irradiance - source;
+    bin.count++;
+    bin.first = bin.first < date ? bin.first : date;
+    bin.last = bin.last > date ? bin.last : date;
+    months.set(key, bin);
+  }
+  const bins = [...months.values()].filter(bin => bin.count >= SOLAR_ALIGNMENT_MIN_DAYS);
+  const differences = bins.map(bin => bin.sum / bin.count);
+  const offset = bins.length >= SOLAR_ALIGNMENT_MIN_MONTHS ? medianValue(differences) : null;
+  return { offset, months: bins.length, days: bins.reduce((count, bin) => count + bin.count, 0),
+    first: bins.length ? bins.map(bin => bin.first).sort()[0] : null,
+    last: bins.length ? bins.map(bin => bin.last).sort().at(-1) : null,
+    residualMad: offset === null ? null : medianValue(differences.map(value => Math.abs(value - offset))) };
+}
+
+function annualSolarRows(rows) {
+  const annual = [];
+  const bins = new Map();
+  for (const row of rows) {
+    if (row.cadence === 'annual') { annual.push({ ...row }); continue; }
+    const yearValue = Math.floor(row.time + 1950);
+    const key = sourceSegment(row) + ':' + yearValue;
+    const bin = bins.get(key) || { source: row.source, year: yearValue, sum: 0, count: 0,
+      first: row.time, last: row.time, provisional: false };
+    bin.sum += row.irradiance;
+    bin.count++;
+    bin.first = Math.min(bin.first, row.time);
+    bin.last = Math.max(bin.last, row.time);
+    bin.provisional ||= row.provisional;
+    bins.set(key, bin);
+  }
+  for (const bin of bins.values()) {
+    const first = new Date(millisecondsFromDecimalYear(bin.first + 1950)).toISOString().slice(0, 10);
+    const last = new Date(millisecondsFromDecimalYear(bin.last + 1950)).toISOString().slice(0, 10);
+    const partial = !first.endsWith('-01-01') || !last.endsWith('-12-31');
+    // Partial years sit at the midpoint of their available coverage, so a
+    // short source fragment or unfinished year does not acquire a later date.
+    annual.push({ time: (bin.first + bin.last) / 2, irradiance: bin.sum / bin.count,
+      source: bin.source, cadence: 'annual', maxGapYears: 1.5, provisional: bin.provisional,
+      sampleDate: bin.year + ' CE • ' + (partial ? 'partial-year mean' : 'annual mean'),
+      note: bin.count + ' daily values, ' + first + ' to ' + last + (bin.provisional ? '; includes provisional readings' : '') });
+  }
+  return sortRowsByTimeDesc(annual);
+}
+
 function parseNnlSolarRows(rawLines) {
   const rows = [];
   if (!rawLines || rawLines.length === 0) return rows;
 
-  const daysPerYear = 365.2425;
-  const baseYear = 1610;
+  const epoch = Date.UTC(1610, 0, 1);
 
   for (let i = 0; i < rawLines.length; i++) {
     const line = rawLines[i].trim();
@@ -1371,10 +1102,11 @@ function parseNnlSolarRows(rawLines) {
     if (!Number.isFinite(daysSinceBase) || !Number.isFinite(irradiance)) continue;
     if (irradiance <= 0) continue;
 
-    const decimalYear = baseYear + (daysSinceBase / daysPerYear);
+    const decimalYear = decimalYearFromMilliseconds(epoch + daysSinceBase * 86400000);
     rows.push({
       time: decimalYear - 1950,
-      irradiance
+      irradiance, source: 'solar-nnl', cadence: 'day',
+      sampleDate: new Date(millisecondsFromDecimalYear(decimalYear)).toISOString().slice(0, 10)
     });
   }
 
@@ -1385,8 +1117,6 @@ function parseTsisSolarRows(rawLines) {
   const rows = [];
   if (!rawLines || rawLines.length === 0) return rows;
 
-  const julianAt2000 = 2451545.0;
-  const daysPerYear = 365.2425;
 
   for (let i = 0; i < rawLines.length; i++) {
     const line = rawLines[i].trim();
@@ -1400,25 +1130,46 @@ function parseTsisSolarRows(rawLines) {
     if (!Number.isFinite(julianDate) || !Number.isFinite(irradiance)) continue;
     if (irradiance <= 0) continue;
 
-    const decimalYear = 2000 + ((julianDate - julianAt2000) / daysPerYear);
+    const decimalYear = decimalYearFromMilliseconds((julianDate - 2440587.5) * 86400000);
     rows.push({
       time: decimalYear - 1950,
-      irradiance
+      irradiance, source: 'solar-tsis', cadence: 'day', provisional: tokens[13] === '1',
+      sampleDate: new Date(millisecondsFromDecimalYear(decimalYear)).toISOString().slice(0, 10)
     });
   }
 
   return sortRowsByTimeDesc(rows);
 }
 
+function mergeTsisObservations(localRows, remoteRows) {
+  if (!remoteRows || remoteRows.length === 0) return localRows;
+  const newestLocal = localRows.length > 0 ? localRows[0].time : Number.NEGATIVE_INFINITY;
+  const newestRemote = remoteRows.reduce((newest, row) => max(newest, row.time), Number.NEGATIVE_INFINITY);
+  if (newestRemote < newestLocal - 0.25) return localRows;
+  const byTime = new Map(localRows.map((row) => [Math.round(row.time * 10000), row]));
+  for (const row of remoteRows) {
+    if (Number.isFinite(row.time) && Number.isFinite(row.irradiance) && row.irradiance > 0) {
+      byTime.set(Math.round(row.time * 10000), { ...byTime.get(Math.round(row.time * 10000)), ...row });
+    }
+  }
+  return sortRowsByTimeDesc([...byTime.values()]);
+}
+
 function smoothDenseSolarRows(rows, denseStartTime, windowDays) {
   if (!rows || rows.length < 3) return rows;
   if (!Number.isFinite(windowDays) || windowDays <= 0) return rows;
+  // Each source is smoothed independently, so the window never blends a join.
+  const sources = new Set(rows.map(row => row.source));
+  if (sources.size > 1) {
+    return sortRowsByTimeDesc([...sources].flatMap(source =>
+      smoothDenseSolarRows(rows.filter(row => row.source === source), denseStartTime, windowDays)));
+  }
 
   let denseCount = 0;
   while (denseCount < rows.length && rows[denseCount].time >= denseStartTime) denseCount++;
   if (denseCount < 3) return rows;
 
-  const windowYears = windowDays / 365.2425;
+  const windowYears = windowDays / (2 * 365.2425);
   const ascendingTimes = new Array(denseCount);
   const ascendingValues = new Array(denseCount);
 
@@ -1455,192 +1206,68 @@ function smoothDenseSolarRows(rows, denseStartTime, windowDays) {
   const smoothedRows = cloneTimeValueRows(rows, 'irradiance');
   for (let i = 0; i < denseCount; i++) {
     smoothedRows[denseCount - 1 - i].irradiance = smoothedAscending[i];
+    smoothedRows[denseCount - 1 - i].note = '50-day mean within this source' +
+      (smoothedRows[denseCount - 1 - i].provisional ? '; provisional observation' : '');
   }
 
   return smoothedRows;
 }
 
-function mergeSolarTableWithTsisRows(baseTable, tsisRows) {
-  if (!baseTable || !tsisRows || tsisRows.length === 0) return baseTable;
-
-  const baseRows = parseSolarIrradianceTableRows(baseTable);
-  if (baseRows.length === 0) return baseTable;
-
-  const calibratedTsisRows = calibrateRowsToReferenceByOverlap(tsisRows, baseRows, 'irradiance');
-  if (calibratedTsisRows.length === 0) return baseTable;
-
-  solarTsisNewestTime = calibratedTsisRows[0].time;
-  solarTsisOldestTime = calibratedTsisRows[calibratedTsisRows.length - 1].time;
-
-  const newestTsisTime = calibratedTsisRows[0].time;
-  const oldestTsisTime = calibratedTsisRows[calibratedTsisRows.length - 1].time;
-  const mergedRows = cloneTimeValueRows(calibratedTsisRows, 'irradiance');
-  appendRowsOutsideInclusiveRange(mergedRows, baseRows, 'irradiance', newestTsisTime, oldestTsisTime);
-
-  sortRowsByTimeDesc(mergedRows);
-  const smoothedRows = smoothDenseSolarRows(
-    mergedRows,
-    SOLAR_DENSE_SMOOTH_START_TIME,
-    SOLAR_DENSE_SMOOTH_WINDOW_DAYS
-  );
-  return buildTimeValueTable(smoothedRows, 'irradiance', 'Solar Irradiance', baseTable);
+function mergeSolarTableWithNnlAndTsis(baseTable, nnlRawLines, tsisRawLines, tsisRowsOverride = null) {
+  const base = parseSolarIrradianceTableRows(baseTable);
+  const nnl = parseNnlSolarRows(nnlRawLines);
+  const tsis = mergeTsisObservations(parseTsisSolarRows(tsisRawLines), tsisRowsOverride)
+    .map(row => ({ ...row, source: 'solar-tsis', maxGapYears: 7 / 365.2425 }));
+  // Preserve the measured TSIS irradiances. Only shift the historical models.
+  const nnlAlignment = pairedSolarOffset(nnl, tsis);
+  const alignedNnl = offsetValueRows(nnl, 'irradiance', nnlAlignment.offset ?? 0);
+  const reference = alignedNnl.length ? alignedNnl : tsis;
+  const start = reference.at(-1)?.time ?? Infinity;
+  const baseAlignment = pairedSolarOffset(base, reference, start, start + SOLAR_ALIGNMENT_WINDOW_YEARS);
+  const alignedBase = offsetValueRows(base, 'irradiance', baseAlignment.offset ?? 0);
+  solarCalibration = {
+    nnlOffset: nnlAlignment.offset, satireOffset: baseAlignment.offset,
+    nnlAlignment, baseAlignment
+  };
+  const oldestTsis = tsis.at(-1)?.time ?? Infinity;
+  const olderNnl = alignedNnl.filter(row => row.time < oldestTsis);
+  const oldestContinuation = olderNnl.at(-1)?.time ?? tsis.at(-1)?.time ?? Infinity;
+  const merged = sortRowsByTimeDesc([
+    ...tsis, ...olderNnl, ...alignedBase.filter(row => row.time < oldestContinuation)
+  ]);
+  const table = buildTimeValueTable(smoothDenseSolarRows(merged,
+    SOLAR_DENSE_SMOOTH_START_TIME, SOLAR_DENSE_SMOOTH_WINDOW_DAYS),
+    'irradiance', 'Solar Irradiance', baseTable);
+  table.solarCadence = 'detail';
+  table.annualTable = buildTimeValueTable(annualSolarRows(merged), 'irradiance', 'Solar Irradiance');
+  table.annualTable.solarCadence = 'annual';
+  return table;
 }
 
-function mergeSolarTableWithNnlAndTsis(baseTable, nnlRawLines, tsisRawLines) {
-  const baseRows = parseSolarIrradianceTableRows(baseTable);
-  if (baseRows.length === 0) return baseTable;
-
-  const nnlRows = parseNnlSolarRows(nnlRawLines);
-  const calibratedNnlRows = nnlRows.length > 0
-    ? calibrateRowsToReferenceByOverlap(nnlRows, baseRows, 'irradiance')
-    : [];
-
-  const tsisRows = parseTsisSolarRows(tsisRawLines);
-  const referenceRowsForTsis = calibratedNnlRows.length > 0 ? calibratedNnlRows : baseRows;
-  const calibratedTsisRows = tsisRows.length > 0
-    ? calibrateRowsToReferenceByOverlap(tsisRows, referenceRowsForTsis, 'irradiance')
-    : [];
-
-  solarNnlNewestTime = calibratedNnlRows.length > 0 ? calibratedNnlRows[0].time : Number.NEGATIVE_INFINITY;
-  solarNnlOldestTime = calibratedNnlRows.length > 0 ? calibratedNnlRows[calibratedNnlRows.length - 1].time : Number.POSITIVE_INFINITY;
-  solarTsisNewestTime = calibratedTsisRows.length > 0 ? calibratedTsisRows[0].time : Number.NEGATIVE_INFINITY;
-  solarTsisOldestTime = calibratedTsisRows.length > 0 ? calibratedTsisRows[calibratedTsisRows.length - 1].time : Number.POSITIVE_INFINITY;
-
-  if (calibratedNnlRows.length === 0 && calibratedTsisRows.length === 0) return baseTable;
-
-  const mergedRows = [];
-
-  if (calibratedTsisRows.length > 0) {
-    for (let i = 0; i < calibratedTsisRows.length; i++) {
-      mergedRows.push({
-        time: calibratedTsisRows[i].time,
-        irradiance: calibratedTsisRows[i].irradiance
-      });
-    }
-  }
-
-  if (calibratedNnlRows.length > 0) {
-    if (calibratedTsisRows.length > 0) {
-      const newestTsisTime = calibratedTsisRows[0].time;
-      const oldestTsisTime = calibratedTsisRows[calibratedTsisRows.length - 1].time;
-      appendRowsOutsideInclusiveRange(mergedRows, calibratedNnlRows, 'irradiance', newestTsisTime, oldestTsisTime);
-    } else {
-      appendRowsOutsideInclusiveRange(mergedRows, calibratedNnlRows, 'irradiance', Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY);
-    }
-
-    const newestNnlTime = calibratedNnlRows[0].time;
-    const oldestNnlTime = calibratedNnlRows[calibratedNnlRows.length - 1].time;
-    appendRowsOutsideInclusiveRange(mergedRows, baseRows, 'irradiance', newestNnlTime, oldestNnlTime);
-  } else {
-    const newestTsisTime = calibratedTsisRows[0].time;
-    const oldestTsisTime = calibratedTsisRows[calibratedTsisRows.length - 1].time;
-    appendRowsOutsideInclusiveRange(mergedRows, baseRows, 'irradiance', newestTsisTime, oldestTsisTime);
-  }
-
-  sortRowsByTimeDesc(mergedRows);
-  const smoothedRows = smoothDenseSolarRows(
-    mergedRows,
-    SOLAR_DENSE_SMOOTH_START_TIME,
-    SOLAR_DENSE_SMOOTH_WINDOW_DAYS
-  );
-  return buildTimeValueTable(smoothedRows, 'irradiance', 'Solar Irradiance', baseTable);
-}
-
-function averageSeaLevelInRange(rows, startTime, endTime) {
-  return averageRowsInRange(rows, 'sealevel', startTime, endTime);
-}
-
-function calibrateSeaLevelRowsToReference(sourceRows, referenceRows) {
-  return calibrateRowsToReferenceByOverlap(sourceRows, referenceRows, 'sealevel');
-}
-
-function mergeSeaLevelTableWithColorado(legacyTable, coloradoRawLines, gpRawLines, koppRawLines, millerRawLines) {
-  const mergedTable = new p5.Table();
-  mergedTable.addColumn('time');
-  mergedTable.addColumn('Sealevel');
-
-  const coloradoRows = parseColoradoSeaLevelRows(coloradoRawLines);
-  const legacyRowsUncalibrated = parseSeaLevelTableRows(legacyTable);
-  const gpRowsUncalibrated = parseGp2014SeaLevelRows(gpRawLines);
-  const koppRowsUncalibrated = parseKopp2016GlobalSeaLevelRows(koppRawLines);
-  const millerRowsUncalibrated = parseMiller2024SeaLevelRows(millerRawLines);
-
-  const newestReferenceRows = coloradoRows.length > 0 ? coloradoRows : legacyRowsUncalibrated;
-  const gpRows = gpRowsUncalibrated.length > 0
-    ? calibrateSeaLevelRowsToReference(gpRowsUncalibrated, newestReferenceRows)
-    : [];
-  const koppReferenceRows = gpRows.length > 0 ? gpRows : newestReferenceRows;
-  const koppRows = koppRowsUncalibrated.length > 0
-    ? calibrateSeaLevelRowsToReference(koppRowsUncalibrated, koppReferenceRows)
-    : [];
-
-  const legacyReferenceRows = koppRows.length > 0
-    ? koppRows
-    : (gpRows.length > 0 ? gpRows : newestReferenceRows);
-  const legacyRows = legacyRowsUncalibrated.length > 0
-    ? calibrateSeaLevelRowsToReference(legacyRowsUncalibrated, legacyReferenceRows)
-    : [];
-
-  const millerReferenceRows = legacyRows.length > 0
-    ? legacyRows
-    : legacyReferenceRows;
-  const millerRows = millerRowsUncalibrated.length > 0
-    ? calibrateSeaLevelRowsToReference(millerRowsUncalibrated, millerReferenceRows)
-    : [];
-
-  const modernStartTime = coloradoRows.length > 0 ? coloradoRows[coloradoRows.length - 1].time : Number.POSITIVE_INFINITY;
-  const gpStartTime = gpRows.length > 0 ? gpRows[gpRows.length - 1].time : modernStartTime;
-  const koppStartTime = koppRows.length > 0 ? koppRows[koppRows.length - 1].time : gpStartTime;
-  const legacyOldestTime = legacyRows.length > 0 ? legacyRows[legacyRows.length - 1].time : koppStartTime;
-
-  for (let i = 0; i < coloradoRows.length; i++) {
-    const row = mergedTable.addRow();
-    row.setNum('time', coloradoRows[i].time);
-    row.setNum('Sealevel', coloradoRows[i].sealevel);
-  }
-
-  for (let i = 0; i < gpRows.length; i++) {
-    if (gpRows[i].time >= modernStartTime) continue;
-
-    const row = mergedTable.addRow();
-    row.setNum('time', gpRows[i].time);
-    row.setNum('Sealevel', gpRows[i].sealevel);
-  }
-
-  for (let i = 0; i < koppRows.length; i++) {
-    if (koppRows[i].time >= gpStartTime) continue;
-
-    const row = mergedTable.addRow();
-    row.setNum('time', koppRows[i].time);
-    row.setNum('Sealevel', koppRows[i].sealevel);
-  }
-
-  for (let i = 0; i < legacyRows.length; i++) {
-    if (legacyRows[i].time >= koppStartTime) continue;
-
-    const row = mergedTable.addRow();
-    row.setNum('time', legacyRows[i].time);
-    row.setNum('Sealevel', legacyRows[i].sealevel);
-  }
-
-  for (let i = 0; i < millerRows.length; i++) {
-    if (millerRows[i].time >= legacyOldestTime) continue;
-
-    const row = mergedTable.addRow();
-    row.setNum('time', millerRows[i].time);
-    row.setNum('Sealevel', millerRows[i].sealevel);
-  }
-
-  if (mergedTable.getRowCount() > 0) return mergedTable;
-  return legacyTable;
-}
-
-function median(values) {
-  if (!values || values.length === 0) return null;
-  const sorted = values.slice().sort((a, b) => a - b);
-  const mid = int(sorted.length / 2);
-  if (sorted.length % 2 === 0) return (sorted[mid - 1] + sorted[mid]) / 2;
-  return sorted[mid];
+function buildCombinedSeaLevelTable(coloradoRows, gpRows, millerRows) {
+  // Modern observations have arbitrary datums. Anchor the tide-gauge curve to
+  // its 1950 mean, then align satellite observations using matching months.
+  const reference = gpRows.filter(row => row.time >= 0 && row.time < 1);
+  if (reference.length !== 12) throw new Error('Sea level requires all twelve tide-gauge months of 1950');
+  const gpReference = reference.reduce((sum, row) => sum + row.sealevel, 0) / reference.length;
+  const gp = offsetValueRows(gpRows, 'sealevel', -gpReference);
+  const satelliteOffset = matchedMonthlyOffset(coloradoRows, gp, 'sealevel',
+    Math.max(coloradoRows.at(-1)?.time ?? Infinity, gp.at(-1).time),
+    Math.min(coloradoRows[0]?.time ?? -Infinity, gp[0].time));
+  if (coloradoRows.length && satelliteOffset === null) throw new Error('Sea-level records have no shared calibration months');
+  const satellites = offsetValueRows(coloradoRows, 'sealevel', satelliteOffset ?? 0);
+  // Geological zero age is only an approximate modern reference. Rebase that
+  // published point separately; do not fit it to the modern measurements.
+  const zeroAge = millerRows.find(row => row.time === 0);
+  if (!zeroAge) throw new Error('Miller requires its published zero-age reference');
+  const geological = offsetValueRows(millerRows, 'sealevel', -zeroAge.sealevel);
+  seaLevelCalibration = { gpReference, satelliteOffset, millerReference: zeroAge.sealevel };
+  const oldestSatellite = satellites.at(-1)?.time ?? Infinity;
+  const olderGp = gp.filter(row => row.time < oldestSatellite);
+  const oldestModern = olderGp.at(-1)?.time ?? satellites.at(-1)?.time ?? Infinity;
+  return buildTimeValueTable(sortRowsByTimeDesc([
+    ...satellites, ...olderGp, ...geological.filter(row => row.time < oldestModern)
+  ]), 'sealevel', 'Sealevel');
 }
 
 function setup() {
@@ -1648,47 +1275,32 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   currentYear = decimalYearFromYmd(year(), month(), day() + 1);
   if (!Number.isFinite(currentYear)) currentYear = year();
-  sourceTables.earthOrbit = buildEarthOrbitTableFromZeebe(sourceTables.zeebeOrbitalRaw, currentYear - 1950);
+  sourceTables.earthOrbit = buildEarthOrbitTableFromZeebe(sourceTables.zeebeOrbitalRaw);
   sourceTables.volcanic = buildVolcanicSaodTable(sourceTables.volcanicSaodRaw, sourceTables.volcanic);
   sourceTables.population = buildPopulationTableFromLongRun(sourceTables.populationLongRunRaw, year());
-  sourceTables.co2 = buildCo2TableFromAntarcticaComposite(sourceTables.co2AntarcticaRaw);
-  sourceTables.co2 = mergeCo2TableWithRaeAlkenone(sourceTables.co2, sourceTables.co2RaeAlkenoneRaw, sourceTables.co2AntarcticaRaw);
-  sourceTables.co2 = mergeCo2TableWithTripati(sourceTables.co2, sourceTables.co2TripatiRaw, sourceTables.co2AntarcticaRaw);
-  sourceTables.co2 = mergeCo2TableWithRaeD11b(
-    sourceTables.co2,
-    sourceTables.co2RaeD11bRaw,
-    CO2_RAE_D11B_FILL_BEFORE_TIME,
-    CO2_HOLE_FILL_TOLERANCE_YEARS
-  );
+  sourceTables.co2 = buildCombinedCo2Table();
 
-  const mergedTemperature = new p5.Table();
-  mergedTemperature.addColumn('time');
-  mergedTemperature.addColumn('Temperature');
-  sourceTables.temperature = mergedTemperature;
-
-  sourceTables.temperature = mergeTemperatureTableWithHansen(sourceTables.temperature, sourceTables.hansenTempRaw);
-  sourceTables.temperature = mergeTemperatureTableWithEdc(sourceTables.temperature, sourceTables.edcTempRaw);
-  sourceTables.temperature = mergeTemperatureTableWithNeukom(sourceTables.temperature, sourceTables.neukomTempRaw);
-  sourceTables.temperature = mergeTemperatureTableWithGiss(sourceTables.temperature, sourceTables.gissTempRaw);
-  sourceTables.co2 = mergeCo2TableWithNoaaDaily(sourceTables.co2, sourceTables.co2DailyRaw, sourceTables.co2InSituRaw);
-  sourceTables.solarIrradiance = buildTimeValueTable(
-    extractTimeValueRows(sourceTables.solarIrradiance, 'Solar Irradiance', 'irradiance'),
+  sourceTables.gissTemperature = buildTimeValueTable(parseGissTemperatureRows(sourceTables.gissTempRaw), 'temperature', 'Temperature');
+  rebuildCombinedTemperature();
+  sourceTables.solarBase = buildTimeValueTable(
+    parsePmipSolarRows(sourceTables.solarIrradiance),
     'irradiance',
     'Solar Irradiance',
     sourceTables.solarIrradiance
   );
+  sourceTables.solarTsisRows = parseTsisSolarRows(sourceTables.solarIrradianceTsisRaw);
   sourceTables.solarIrradiance = mergeSolarTableWithNnlAndTsis(
-    sourceTables.solarIrradiance,
+    sourceTables.solarBase,
     sourceTables.solarIrradianceNnlRaw,
-    sourceTables.solarIrradianceTsisRaw
+    sourceTables.solarIrradianceTsisRaw,
+    sourceTables.solarTsisRows
   );
-  sourceTables.sealevel = mergeSeaLevelTableWithColorado(
-    sourceTables.sealevel,
-    sourceTables.sealevelRaw,
-    sourceTables.sealevelGpRaw,
-    sourceTables.sealevelKoppRaw,
-    sourceTables.sealevelMillerRaw
-  );
+  sourceTables.coloradoSealevel = buildTimeValueTable(
+    parseColoradoSeaLevelRows(sourceTables.sealevelRaw), 'sealevel', 'Sealevel');
+  sourceTables.sealevel = buildCombinedSeaLevelTable(
+    parseSeaLevelTableRows(sourceTables.coloradoSealevel),
+    parseGp2014SeaLevelRows(sourceTables.sealevelGpRaw),
+    parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw));
 
   // Add historical events (type 0 = duration bands, type 1 = point events)
   event.push(new TimelineEvent(0, 'Age of the Universe', -13800000000, currentYear * 3, 255));
@@ -1740,18 +1352,40 @@ function setup() {
   event.push(new TimelineEvent(1, 'Paris Agreement', 2016.309384, 2016.309384, 255));
   event.push(new TimelineEvent(1, 'COVID-19', 2020.082137, 2023.342238, 255));
 
-  // Load datasets (position 0 = baseline, position 1 = overlay)
-  data.push(new Data(sourceTables.temperature, 'time', 'Temperature', '°C', 0, color(255), 0, true));
+  // Temperature stays at the bottom; simple top buttons choose the comparison.
+  data.push(new Data(sourceTables.temperature, 'time', 'Temperature', '°C', 0, color(255), 0, temperatureAutoScale, 'Global temperature'));
+  data.push(new Data(sourceTables.co2, 'time', 'CO2', 'ppm', 1, color(255, 128, 64), 0, true, 'Atmospheric CO₂'));
+  data.push(new Data(sourceTables.earthOrbit, 'time', 'Eccentricity', '', 1, color(128, 128, 255), 0, false, 'Orbital eccentricity'));
+  data.push(new Data(sourceTables.solarIrradiance, 'time', 'Solar Irradiance', 'W/m²', 1, color(255, 220, 0), 0, true, 'Total solar irradiance'));
+  data.push(new Data(sourceTables.volcanic, 'time', 'Volcanic Activity', 'OD', 1, color(255, 180, 80), 0, true, 'Volcanic optical depth'));
+  data.push(new Data(sourceTables.sealevel, 'time', 'Sealevel', 'm', 1, color(0, 128, 255), 0, true, 'Global sea level'));
+  data.push(new Data(sourceTables.population, 'time', 'Population', 'people', 1, color(255, 128, 200), 0, true, 'World population (estimates and projections)'));
+}
 
-  data.push(new Data(sourceTables.co2, 'time', 'CO2', 'ppm', 1, color(255, 128, 64), 0, true));
-  data.push(new Data(sourceTables.earthOrbit, 'time', 'Eccentricity', '', 1, color(128, 128, 255), 0, false));
-  data.push(new Data(sourceTables.solarIrradiance, 'time', 'Solar Irradiance', 'W/m²', 1, color(255, 220, 0), 0, true));
-  data.push(new Data(sourceTables.volcanic, 'time', 'Volcanic Activity', 'OD', 1, color(255, 180, 80), 0, true));
-  data.push(new Data(sourceTables.sealevel, 'time', 'Sealevel', 'm', 1, color(0, 128, 255), 0, true));
-  
-  data.push(new Data(sourceTables.population, 'time', 'Population', 'people', 1, color(255, 128, 200), 0, true));
+function selectComparison(upperIndex) {
+  if (!data[upperIndex] || upperIndex < 1) return;
+  selectedData = upperIndex;
+  redrawRequested = true;
+}
 
-  maxData = data.length - 1; // Set maximum dataset count
+function toggleTemperatureScale() {
+  temperatureAutoScale = !temperatureAutoScale;
+  data[0].yScrolling = temperatureAutoScale;
+  redrawRequested = true;
+}
+
+function showDataGuide() {
+  if (typeof document === 'undefined') return;
+  const guide = document.getElementById('about-data');
+  if (guide && !guide.open) guide.showModal();
+}
+
+function dataGuideIsOpen() {
+  return typeof document !== 'undefined' && document.getElementById('about-data')?.open;
+}
+
+function panelTargetY(position) {
+  return height / GUI_HEIGHT_DIVISOR + (position === 0 ? height / DATA_PANEL_HEIGHT_DIVISOR : 0);
 }
 
 function draw() {
@@ -1763,17 +1397,19 @@ function draw() {
   }
 
   textAlign(LEFT, BASELINE);
-  push();
-  translate(-shift, 0); // Apply left margin shift
 
   // Calculate time-to-pixel conversion (negative = past extends left)
   oneYear = -(1 / scrollValue) * 1000;
 
   // Only redraw if something changed (performance optimization)
-  if (dist(mouseX, mouseY, pmouseX, pmouseY) > 0
+  if (redrawRequested || dist(mouseX, mouseY, pmouseX, pmouseY) > 0
     || scrollValue !== pScrollValue
-    || data[selectedData].rectY !== data[selectedData].defRectY
-    || data[0].rectY !== data[0].defRectY) {
+    || data[selectedData].position !== 1
+    || Math.abs(data[selectedData].rectY - panelTargetY(1)) > Data.SNAP_THRESHOLD_PX
+    || Math.abs(data[0].rectY - panelTargetY(0)) > Data.SNAP_THRESHOLD_PX) {
+    redrawRequested = false;
+    push();
+    translate(-shift, 0); // Apply left margin shift
     perfDataVertices = 0;
     perfEventsDrawn = 0;
     perfEventsCulled = 0;
@@ -1788,9 +1424,9 @@ function draw() {
     noStroke();
     rect(0, 0, width, height / GUI_HEIGHT_DIVISOR);
 
-    // Draw datasets (temperature baseline + selected overlay)
-    data[0].draw(); // Always draw temperature
-    if (selectedData > 0) data[selectedData].draw(); // Draw selected dataset
+    data[0].draw();
+    data[selectedData].position = 1;
+    data[selectedData].draw();
 
     // Draw bottom timeline background
     fill(0);
@@ -1916,119 +1552,110 @@ function draw() {
 }
 
 function GUI() {
+  const labels = ['CO₂', 'Orbit', 'Solar', 'Volcanoes', 'Sea level', 'Population'];
   textAlign(CENTER, CENTER);
-  textSize(height / TEXT_SIZE_DIVISOR_LARGE);
+  textSize(max(10, min(height / 42, width / 75)));
   stroke(255);
   strokeWeight(0.5);
   line(0, height / GUI_HEIGHT_DIVISOR, width, height / GUI_HEIGHT_DIVISOR);
   noStroke();
-  for (let i = 0; i < maxData; i++) {
-    fill(128);
-    if (mouseX > width / maxData * i && mouseX < width / maxData * i + width / maxData && mouseY < height / GUI_HEIGHT_DIVISOR) {
-      if (mouseIsPressed) {
-        selectedData = i + 1;
-      } else {
-        fill(255);
-      }
-    }
-
-    if (i === selectedData - 1) fill(data[selectedData].c);
-    text(data[i + 1].columnY, width / (maxData * 2) + width / maxData * i, height / 26);
+  for (let i = 0; i < labels.length; i++) {
+    fill(i + 1 === selectedData ? data[i + 1].c : 160);
+    if (mouseY >= 0 && mouseY < height / GUI_HEIGHT_DIVISOR
+      && mouseX >= width * i / labels.length && mouseX < width * (i + 1) / labels.length) fill(255);
+    text(labels[i], width * (i + 0.5) / labels.length, height / (2 * GUI_HEIGHT_DIVISOR));
   }
 }
 
+function setZoom(value) {
+  if (!Number.isFinite(value)) return;
+  scrollValue = constrain(value, 1, MAX_SCROLL_VALUE);
+  redrawRequested = true;
+}
+
 function keyPressed() {
-  if (key === '-' || key === 'a' || key === 'A' || (keyCode === LEFT_ARROW && scrollValue + scrollSpeed < MAX_SCROLL_VALUE)) {
-    scrollValue += scrollSpeed + (scrollValue / 50.0);
+  if (dataGuideIsOpen()) return;
+  if (key === '-' || key === 'a' || key === 'A' || keyCode === LEFT_ARROW) {
+    setZoom(scrollValue + scrollSpeed + scrollValue / 50);
   }
-  if (key === '+' || key === 'd' || key === 'D' || (keyCode === RIGHT_ARROW && scrollValue - scrollSpeed >= 1)) {
-    scrollValue -= scrollSpeed + (scrollValue / 50.0);
+  if (key === '+' || key === 'd' || key === 'D' || keyCode === RIGHT_ARROW) {
+    setZoom(scrollValue - scrollSpeed - scrollValue / 50);
   }
-  if (key === '0') scrollValue = 10;
-  if (key === '1') scrollValue = 100;
-  if (key === '2') scrollValue = 1000;
-  if (key === '3') scrollValue = 10000;
-  if (key === '4') scrollValue = 100000;
-  if (key === '5') scrollValue = 1000000;
-  if (key === '6') scrollValue = 10000000;
-  if (key === '7') scrollValue = 100000000;
-  if (key === '8') scrollValue = 1000000000;
-  if (key === '9') scrollValue = 14000000000;
-  if (key === 'p' || key === 'P') perfHUD = !perfHUD;
-  if (key === 'C' || key === 'c' || key === ' ') showCursor = !showCursor;
-  if (key === 'V' || key === 'v') showDataSourceTooltip = !showDataSourceTooltip;
+  const presets = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000, 14000000000];
+  if (/^[0-9]$/.test(key)) setZoom(presets[Number(key)]);
+  if (key === 'p' || key === 'P') { perfHUD = !perfHUD; redrawRequested = true; }
+  if (key === 'C' || key === 'c' || key === ' ') { showCursor = !showCursor; redrawRequested = true; }
+  if (key === 'V' || key === 'v') { showDataSourceTooltip = !showDataSourceTooltip; redrawRequested = true; }
+  if (key === 'Y' || key === 'y') toggleTemperatureScale();
+  if (key === 'H' || key === 'h') showDataGuide();
   if (key === 'R' || key === 'r') {
     refreshAllRemoteSeries();
   }
 }
 
-function sourceLabelForDataPoint(columnY, timeValue) {
-  if (columnY === 'Solar Irradiance') {
-    if (Number.isFinite(solarTsisNewestTime) && Number.isFinite(solarTsisOldestTime)
-      && timeValue <= solarTsisNewestTime && timeValue >= solarTsisOldestTime) {
-      return `TSIS 24hr (${solarRefreshSource})`;
-    }
-    if (Number.isFinite(solarNnlNewestTime) && Number.isFinite(solarNnlOldestTime)
-      && timeValue <= solarNnlNewestTime && timeValue >= solarNnlOldestTime) {
-      return 'NRLTSI/NNL P1D';
-    }
-    return 'SATIRE-M 14C fc';
-  }
+function sourceLabelForDataPoint(sample) {
+  return sample?.source ? SOURCE_INFO[sample.source]?.label || sample.source : '';
+}
 
-  if (columnY === 'Temperature') {
-    if (timeValue >= -70) return `NASA GISS (${gissRefreshSource})`;
-    if (timeValue >= -1949) return 'PAGES2k Neukom';
-    if (timeValue >= -800000) return 'EPICA Dome C';
-    return 'Hansen et al.';
+function wrapTooltipText(value, availableWidth) {
+  const lines = [];
+  let current = '';
+  for (const word of value.split(/\s+/)) {
+    const candidate = current ? current + ' ' + word : word;
+    if (current && textWidth(candidate) > availableWidth) {
+      lines.push(current);
+      current = word;
+    } else current = candidate;
   }
-
-  if (columnY === 'CO2') {
-    if (timeValue >= 8) return `NOAA/Scripps (${co2RefreshSource})`;
-    if (timeValue >= -800000) return 'Antarctica composite';
-    return 'Deep-time composite (Rae/Tripati)';
-  }
-
-  if (columnY === 'Sealevel') {
-    return `Composite (${sealevelRefreshSource})`;
-  }
-
-  if (columnY === 'Volcanic Activity') return 'eVolv2k + HolVol (SAOD)';
-  if (columnY === 'Eccentricity') return 'Zeebe 2019 orbital';
-  if (columnY === 'Population') return 'OWID long-run world population';
-  return '';
+  if (current) lines.push(current);
+  return lines;
 }
 
 function mousePressed() {
-  if (mouseButton === RIGHT) showCursor = !showCursor;
+  if (dataGuideIsOpen()) return;
+  if (mouseButton === RIGHT) { showCursor = !showCursor; redrawRequested = true; }
+  else if (mouseY >= 0 && mouseY < height / GUI_HEIGHT_DIVISOR && mouseX >= 0 && mouseX < width) {
+    selectComparison(1 + Math.floor(mouseX / width * (data.length - 1)));
+  } else if (mouseX > width - 220 && mouseY >= data[0].rectY + 20 && mouseY < data[0].rectY + 45) {
+    toggleTemperatureScale();
+  } else if (mouseX < 190 && mouseY >= data[0].rectY + 40 && mouseY < data[0].rectY + 65) {
+    showDataGuide();
+  }
 }
 
 function mouseWheel(event) {
+  if (dataGuideIsOpen()) return true;
   // Scale zoom proportionally to current zoom level
   const wheelSteps = event.delta / 100;
   const zoomFactor = 1.0 + (0.25 * wheelSteps); // 25% zoom per wheel step
 
   // Apply zoom with bounds checking
   const newScrollValue = scrollValue * zoomFactor;
-  if (newScrollValue >= 1 && newScrollValue < MAX_SCROLL_VALUE) {
-    scrollValue = newScrollValue;
-  }
+  setZoom(newScrollValue);
 
   return false;
 }
 
+function mouseMoved() {
+  // p5 can update its previous-pointer coordinates before the next draw.
+  // Explicitly invalidate the settled view so hover text always follows input.
+  redrawRequested = true;
+}
+
 function mouseDragged() {
+  if (dataGuideIsOpen()) return;
   const deltaX = mouseX - pmouseX;
   let zoomDivisor;
   if (mouseX < width - 200) zoomDivisor = (scrollSpeed * width) - mouseX - shift;
   else zoomDivisor = scrollSpeed * 200;
 
   zoomDivisor = max(10, abs(zoomDivisor));
-  scrollValue += deltaX * (scrollValue / zoomDivisor);
-  scrollValue = constrain(scrollValue, 1, MAX_SCROLL_VALUE - 1);
+  setZoom(scrollValue + deltaX * (scrollValue / zoomDivisor));
 }
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
+  redrawRequested = true;
 }
 
 class Data {
@@ -2036,18 +1663,21 @@ class Data {
   static SNAP_THRESHOLD_PX = 5;
   static SPRING_BASE_SPEED = 5;
   static SPRING_DAMPING_DIVISOR = 10;
-  static COLLAPSED_X_THRESHOLD_PX = 1.0;
-  static MIN_PIXEL_SPACING = 0.01;
-  static MIN_TARGET_VERTICES = 4000;
-  static INITIAL_RENDERED_X = -999999;
 
-  // Constructor: load and process CSV data
-  constructor(sourceTable, sourceColumnX, sourceColumnY, sourceUnit, sourcePosition, sourceColor, sourceType, sourceYScroll) {
+  // Copy a parsed source table into arrays for drawing.
+  constructor(sourceTable, sourceColumnX, sourceColumnY, sourceUnit, sourcePosition, sourceColor, sourceType, sourceYScroll, displayName = sourceColumnY) {
     // Data properties
     this.type = sourceType;                    // Rendering type, panel position
     this.position = sourcePosition;
-    this.dataX = new Array(sourceTable.getRowCount()); // X and Y data arrays
-    this.dataY = new Array(sourceTable.getRowCount());
+    const rowCount = sourceTable ? sourceTable.getRowCount() : 0;
+    this.dataX = new Array(rowCount); // X and Y data arrays
+    this.dataY = new Array(rowCount);
+    this.temperatureRows = sourceTable?.temperatureRows || null;
+    this.seriesRows = sourceTable?.seriesRows || this.temperatureRows;
+    this.hasSourceJoins = new Set((this.seriesRows || []).map(sourceSegment).filter(Boolean)).size > 1;
+    this.hasUncertaintyBands = (this.seriesRows || []).some(row => row.band);
+    this.solarCadence = sourceTable?.solarCadence;
+    this.annualSeries = null;
     this.defRectY = 0;                         // Default Y position for panel
     this.rectX = 0;
     this.rectY = 0;
@@ -2055,6 +1685,7 @@ class Data {
     this.rectH = 0;                            // Panel rectangle properties
     this.columnX = sourceColumnX;
     this.columnY = sourceColumnY;
+    this.displayName = displayName;
     this.unit = sourceUnit;                    // Column names and unit
     this.maxX = 0;
     this.maxY = 0;
@@ -2074,6 +1705,7 @@ class Data {
     if (this.position === 1) this.rectY = -height / 3; // Overlay panel at top
 
     // Initialize min/max values with first row
+    if (rowCount === 0) return;
     this.maxX = sourceTable.getRow(0).getNum(this.columnX);
     this.maxY = sourceTable.getRow(0).getNum(this.columnY);
     this.minX = sourceTable.getRow(0).getNum(this.columnX);
@@ -2086,40 +1718,63 @@ class Data {
       this.dataY[i] = row.getNum(this.columnY);
       if (this.dataX[i] > this.maxX) this.maxX = this.dataX[i];
       if (this.dataX[i] < this.minX) this.minX = this.dataX[i];
-      if (this.dataY[i] > this.maxY) this.maxY = this.dataY[i];
-      if (this.dataY[i] < this.minY) this.minY = this.dataY[i];
+      const [lower, upper] = this.valueBoundsAt(i);
+      if (upper > this.maxY) this.maxY = upper;
+      if (lower < this.minY) this.minY = lower;
     }
     // Calculate data ranges
     this.distY = this.maxY - this.minY;
     this.distX = this.maxX - this.minX;
-    console.log('Max X: ' + this.maxX);
-    console.log('Max Y: ' + this.maxY);
-    console.log('Min X: ' + this.minX);
-    console.log('Min Y: ' + this.minY);
-    console.log('dist X: ' + this.distX);
-    console.log('dist Y: ' + this.distY);
+    if (sourceTable.annualTable) {
+      this.annualSeries = new Data(sourceTable.annualTable, sourceColumnX, sourceColumnY,
+        sourceUnit, sourcePosition, sourceColor, sourceType, sourceYScroll, displayName);
+    }
+  }
+
+  displaySeries() {
+    return this.annualSeries && oneYear !== 0 && Math.abs((width - shift) / oneYear) > SOLAR_ANNUAL_VIEW_YEARS
+      ? this.annualSeries : this;
   }
 
   draw() {
+    const display = this.displaySeries();
+    if (display !== this) {
+      display.rectY = this.rectY;
+      display.position = this.position;
+      display.yScrolling = this.yScrolling;
+      display.draw();
+      for (const key of ['rectX', 'rectY', 'rectW', 'rectH', 'localMinY', 'localMaxY', 'distY', 'dataDist']) {
+        this[key] = display[key];
+      }
+      return;
+    }
+    if (this.dataX.length === 0) {
+      this.rectY = panelTargetY(this.position);
+      return;
+    }
     colorMode(RGB);
     this.defRectY = height / GUI_HEIGHT_DIVISOR;   // Default Y position below GUI
-    this.rectX = width + oneYear * abs(this.maxX - this.BP); // Panel X position (right edge)
+    this.rectX = width - oneYear * (this.maxX - this.BP); // Panel X position (newest observation)
     this.rectW = oneYear * abs(this.distX);        // Panel width based on time range
 
-    let renderDistance = this.visiblePointCount();
+    const visibleCount = this.visiblePointCount();
+    let renderDistance = visibleCount;
 
     // Include one point beyond visible range for proper line drawing
     if (renderDistance < this.dataX.length) renderDistance++;
 
     // Calculate Y-axis scaling (global vs local)
     this.localMinY = this.minY;
-    if (this.yScrolling) {
+    this.localMaxY = this.maxY;
+    this.distY = this.maxY - this.minY;
+    if (this.yScrolling && visibleCount > 0) {
       // Use only visible data for Y-axis scaling
       this.localMaxY = this.dataY[0];
       this.localMinY = this.dataY[0];
-      for (let i = 0; i < renderDistance; i += 1) {
-        if (this.dataY[i] > this.localMaxY) this.localMaxY = this.dataY[i];
-        if (this.dataY[i] < this.localMinY) this.localMinY = this.dataY[i];
+      for (let i = 0; i < visibleCount; i += 1) {
+        const [lower, upper] = this.valueBoundsAt(i);
+        if (upper > this.localMaxY) this.localMaxY = upper;
+        if (lower < this.localMinY) this.localMinY = lower;
       }
       this.distY = this.localMaxY - this.localMinY;
     }
@@ -2148,6 +1803,19 @@ class Data {
     // Special positioning for type 2 (follow mouse)
     if (this.type === 2) this.rectY = mouseY - this.rectH / 2;
 
+    if (visibleCount === 0) {
+      noStroke();
+      fill(0, 32, 64, BACKGROUND_ALPHA);
+      rect(shift, this.rectY, width - shift, this.rectH);
+      fill(this.c);
+      textSize(height / TEXT_SIZE_DIVISOR_MEDIUM);
+      textAlign(LEFT, TOP);
+      text(this.displayName + ':', shift + 10, this.rectY + 5);
+      textSize(height / TEXT_SIZE_DIVISOR_SMALL);
+      text('No sampled data in this period. Zoom out to see the record.', shift + 10, this.rectY + 35);
+      return;
+    }
+
     // Draw panel background
     fill(0, 32, 64, BACKGROUND_ALPHA);
     stroke(255, STROKE_ALPHA_MEDIUM);
@@ -2161,11 +1829,50 @@ class Data {
     textSize(height / TEXT_SIZE_DIVISOR_MEDIUM);
     fill(this.c);
     textAlign(LEFT, TOP);
-    if (this.rectX + this.rectW < shift && this.rectX > shift + textWidth(this.columnY)) text(this.columnY + ':', shift + 10, this.rectY + 5);
-    else if (this.rectX + this.rectW > shift) text(this.columnY + ':', this.rectX + this.rectW + 10, this.rectY + 5);
-    else if (this.rectX < shift + textWidth(this.columnY)) text(this.columnY + ':', this.rectX - textWidth(this.columnY) + 10, this.rectY + 5);
+    if (this.temperatureRows) text(this.displayName + ':', shift + 10, this.rectY + 5);
+    else if (this.rectX + this.rectW < shift && this.rectX > shift + textWidth(this.displayName)) text(this.displayName + ':', shift + 10, this.rectY + 5);
+    else if (this.rectX + this.rectW > shift) text(this.displayName + ':', this.rectX + this.rectW + 10, this.rectY + 5);
+    else if (this.rectX < shift + textWidth(this.displayName)) text(this.displayName + ':', this.rectX - textWidth(this.displayName) + 10, this.rectY + 5);
+
+    // Show the independent vertical scale used by this panel.
+    textSize(height / TEXT_SIZE_DIVISOR_TINY);
+    textAlign(RIGHT, TOP);
+    const axisUnit = this.unit ? ' ' + this.unit : '';
+    text(this.formatTooltipValue(this.localMaxY) + axisUnit, width - 8, this.rectY + 4);
+    textAlign(RIGHT, BOTTOM);
+    text(this.formatTooltipValue(this.localMinY) + axisUnit, width - 8, this.rectY + this.rectH - 4);
+    if (this.temperatureRows) {
+      textAlign(LEFT, TOP);
+      text('Relative to 1961–1990 • source joins marked', shift + 10, this.rectY + height / 34);
+      text('About the data [H]', shift + 10, this.rectY + 46);
+      textAlign(RIGHT, TOP);
+      text('Scale: ' + (temperatureAutoScale ? 'visible range' : 'fixed') + ' [Y]', width - 8, this.rectY + 24);
+    }
+    if (this.columnY === 'Sealevel') {
+      textAlign(LEFT, TOP);
+      text('Relative to 1950 mean • geological reference approximate', shift + 10, this.rectY + height / 34);
+    }
+    if (this.solarCadence) {
+      textAlign(LEFT, TOP);
+      text(this.solarCadence === 'annual' ? 'Annual means • source joins marked'
+        : 'Annual before 1850 • 50-day means since 1850', shift + 10, this.rectY + height / 34);
+    }
+    if (this.columnY === 'CO2' && this.seriesRows.slice(0, visibleCount).some(row => row.band)) {
+      textAlign(LEFT, TOP);
+      text('Deep time: 500,000-year averages • 95% uncertainty band', shift + 10, this.rectY + height / 34);
+    }
+    if (this.columnY === 'Eccentricity') {
+      textAlign(LEFT, TOP);
+      text('1,600 years between samples • latest sample: 2000 CE', shift + 10, this.rectY + height / 34);
+    }
 
     // Begin drawing the data line/curve
+    // The extra off-screen point maintains the line at the left edge but must
+    // neither set the visible scale nor draw beyond the panel's bounds.
+    drawingContext.save();
+    drawingContext.beginPath();
+    drawingContext.rect(shift, this.rectY, width - shift, this.rectH);
+    drawingContext.clip();
     stroke(255);
     strokeWeight(1);
     noFill();
@@ -2174,107 +1881,244 @@ class Data {
     const x = width;
     const y = (this.rectY + this.rectH / 2) - (this.localMinY * h + ((h * this.distY) / 2));
 
-    const lastVisibleIndex = max(0, renderDistance - 1);
-    const visibleSpanPx = abs(oneYear * (this.dataX[0] - this.dataX[lastVisibleIndex]));
-    const collapsedX = renderDistance > 1 && visibleSpanPx < Data.COLLAPSED_X_THRESHOLD_PX;
-
-    beginShape();
+    this.drawUncertaintyBands(renderDistance, x, y, w, h);
+    const plottedIndices = this.extremaPreservingIndices(renderDistance);
+    let previousIndex = null;
     if (this.type === 1) {
-      fill(255);
-      vertex(this.rectX, this.rectY); // Start point for filled curve
+      beginShape();
+      vertex(this.rectX, this.rectY);
     }
-    if (this.type === 1) vertex(this.rectX, ((this.rectY + this.rectH / 2) - (this.minY * (this.rectH / this.distY) + (((this.rectH / this.distY) * this.distY) / 2))) + this.dataY[0] * (this.rectH / this.distY));
-
-    if (collapsedX) {
-      strokeWeight(1);
+    stroke(this.c);
+    for (const index of plottedIndices) {
+      const sample = this.seriesRows?.[index];
+      strokeWeight(sample?.mode === 'points' ? 3 : 1);
+      drawingContext.setLineDash(sample?.mode === 'projection' ? [5, 4] : []);
       stroke(this.c);
-      const collapsedXPos = x - w * (this.dataX[0] - this.BP);
-      const collapsedYPos = y + this.dataY[0] * h;
-      if (this.type === 0) {
-        point(collapsedXPos, collapsedYPos);
-        perfDataVertices++;
-      }
+      const pointX = x - w * (this.dataX[index] - this.BP);
+      const pointY = y + this.dataY[index] * h;
       if (this.type === 1) {
-        curveVertex(collapsedXPos, collapsedYPos);
-        perfDataVertices++;
+        curveVertex(pointX, pointY);
+      } else if (previousIndex === null || !this.canConnectIndices(previousIndex, index)) {
+        point(pointX, pointY);
+      } else {
+        const previousX = x - w * (this.dataX[previousIndex] - this.BP);
+        const previousY = y + this.dataY[previousIndex] * h;
+        line(previousX, previousY, pointX, pointY);
       }
-    } else {
-      // Adaptive point thinning: target a bounded number of vertices per viewport
-      const targetVertices = max(Data.MIN_TARGET_VERTICES, (width - shift) * 2.0);
-      const minPixelSpacing = max(Data.MIN_PIXEL_SPACING, visibleSpanPx / targetVertices);
-      let lastRenderedX = Data.INITIAL_RENDERED_X; // Track X position of last rendered point
+      perfDataVertices++;
+      previousIndex = index;
+    }
+    if (this.type === 1) {
+      vertex(this.rectX + this.rectW, this.rectY);
+      endShape();
+    }
+    drawingContext.restore();
+    if (this.hasSourceJoins) this.drawSourceJoins(renderDistance);
+    this.drawDataTooltip(y, h, renderDistance);
+  }
 
-      for (let i = 0, pI = 1; i < renderDistance; i++) {
-        const pointX = x - w * (this.dataX[i] - this.BP);
-        const prevPointX = x - w * (this.dataX[pI] - this.BP);
-        const pixelSpacing = abs(pointX - lastRenderedX);
+  hasUncertaintyBand(index) {
+    const row = this.seriesRows?.[index];
+    return row?.band && Number.isFinite(row.lower) && Number.isFinite(row.upper);
+  }
 
-        // Always render first point, then only render if spaced far enough apart
-        if (i === 0 || pixelSpacing >= minPixelSpacing) {
+  valueBoundsAt(index) {
+    const value = this.dataY[index];
+    const row = this.seriesRows?.[index];
+    return this.hasUncertaintyBand(index)
+      ? [min(value, row.lower), max(value, row.upper)] : [value, value];
+  }
 
-          strokeWeight(1);
-          stroke(this.c);
-          if (this.type === 0) {
-            line(pointX, y + this.dataY[i] * h, prevPointX, y + this.dataY[pI] * h);
-            perfDataVertices++;
+  drawUncertaintyBands(renderDistance, x, y, w, h) {
+    if (!this.hasUncertaintyBands) return;
+    // Draw the published bounds at their original bin midpoints. Like the
+    // central line, the band connects neighbors only within the same source.
+    push();
+    noStroke();
+    fill(this.c);
+    drawingContext.globalAlpha = 0.18;
+    let indices = [];
+    for (let i = 0; i <= renderDistance; i++) {
+      const valid = i < renderDistance && this.hasUncertaintyBand(i);
+      if (indices.length && (!valid || !this.canConnectIndices(i - 1, i))) {
+        if (indices.length > 1) {
+          beginShape();
+          for (const index of indices) {
+            vertex(x - w * (this.dataX[index] - this.BP), y + this.seriesRows[index].upper * h);
           }
-          if (this.type === 1) {
-            curveVertex(pointX, y + this.dataY[i] * h);
-            perfDataVertices++;
+          for (const index of indices.slice().reverse()) {
+            vertex(x - w * (this.dataX[index] - this.BP), y + this.seriesRows[index].lower * h);
           }
-
-          // Check if mouse is over this data segment for tooltip
-          if (pointX <= mouseX + shift && prevPointX > mouseX + shift) {
-            const valueText = this.formatTooltipValue(this.dataY[i]);
-            const mouseData = this.unit && this.unit.length > 0 ? valueText + ' ' + this.unit : valueText;
-            const sourceLabel = showDataSourceTooltip ? sourceLabelForDataPoint(this.columnY, this.dataX[i]) : '';
-            const sourceLine = sourceLabel.length > 0 ? 'Source: ' + sourceLabel : '';
-            const tooltipWidth = sourceLine.length > 0 ? max(textWidth(mouseData), textWidth(sourceLine)) : textWidth(mouseData);
-            this.dataDist = abs(mouseY - (y + this.dataY[i] * h));
-
-            // Draw tooltip if cursor is enabled and in data area
-            if (showCursor && mouseY > height / GUI_HEIGHT_DIVISOR) {
-              line(mouseX + shift, mouseY, mouseX + shift, y + this.dataY[i] * h); // Vertical line to data point
-              noStroke();
-              rectMode(CORNER);
-
-              // Position tooltip box to avoid screen edge
-              const tooltipHeight = sourceLine.length > 0
-                ? (2 * height / TIMELINE_HEIGHT_DIVISOR_SMALL)
-                : (height / TIMELINE_HEIGHT_DIVISOR_SMALL);
-              if (mouseX + shift < width - tooltipWidth) {
-                fill(0, 32, 64, BACKGROUND_ALPHA_HIGH);
-                rect(mouseX + shift, y + this.dataY[i] * h - 5, tooltipWidth + 5, -tooltipHeight);
-                textAlign(LEFT, BASELINE);
-                fill(this.c);
-                text(mouseData + ' ', mouseX + shift, y + this.dataY[i] * h - 10);
-                if (sourceLine.length > 0) {
-                  fill(220);
-                  text(sourceLine, mouseX + shift, y + this.dataY[i] * h - 10 - (height / TIMELINE_HEIGHT_DIVISOR_SMALL));
-                }
-              } else if (mouseX + shift >= width - tooltipWidth) {
-                fill(0, 32, 64, BACKGROUND_ALPHA_HIGH);
-                rect(mouseX + shift, y + this.dataY[i] * h - 5, -tooltipWidth + 5, -tooltipHeight);
-                textAlign(RIGHT, BASELINE);
-                fill(this.c);
-                text(mouseData, mouseX + shift, y + this.dataY[i] * h - 10);
-                if (sourceLine.length > 0) {
-                  fill(220);
-                  text(sourceLine, mouseX + shift, y + this.dataY[i] * h - 10 - (height / TIMELINE_HEIGHT_DIVISOR_SMALL));
-                }
-              }
-            }
-
-          }
-          lastRenderedX = pointX;
-          pI = i;
+          endShape(CLOSE);
         }
+        indices = [];
+      }
+      if (valid) indices.push(i);
+    }
+    pop();
+  }
+
+  extremaPreservingIndices(renderDistance) {
+    if (renderDistance <= 0) return [];
+    const buckets = new Map();
+    const selected = new Set([0, renderDistance - 1]);
+    for (let i = 0; i < renderDistance; i++) {
+      if (i > 0 && !this.canConnectIndices(i - 1, i)) {
+        selected.add(i - 1);
+        selected.add(i);
+      }
+      const screenX = width - oneYear * (this.dataX[i] - this.BP);
+      if (!Number.isFinite(screenX) || !Number.isFinite(this.dataY[i])) continue;
+      const pixel = Math.floor(screenX);
+      const bucket = buckets.get(pixel);
+      if (!bucket) {
+        buckets.set(pixel, { first: i, last: i, min: i, max: i });
+      } else {
+        bucket.last = i;
+        if (this.dataY[i] < this.dataY[bucket.min]) bucket.min = i;
+        if (this.dataY[i] > this.dataY[bucket.max]) bucket.max = i;
       }
     }
+    for (const bucket of buckets.values()) {
+      selected.add(bucket.first);
+      selected.add(bucket.last);
+      selected.add(bucket.min);
+      selected.add(bucket.max);
+    }
+    return [...selected].sort((a, b) => a - b);
+  }
 
-    // End the curve shape
-    if (this.type === 1) vertex(this.rectX + this.rectW, this.rectY);
-    endShape();
+  canConnectIndices(first, second) {
+    if (!this.seriesRows) return true;
+    const a = this.seriesRows[first];
+    const b = this.seriesRows[second];
+    if (a.mode === 'points' || b.mode === 'points') return false;
+    if (sourceSegment(a) !== sourceSegment(b)) return false;
+    // Thinning may skip hundreds of valid samples. Check the original adjacent
+    // gaps, rather than treating the distance between plotted points as a gap.
+    for (let i = Math.min(first, second) + 1; i <= Math.max(first, second); i++) {
+      const newer = this.seriesRows[i - 1];
+      const older = this.seriesRows[i];
+      if (sourceSegment(newer) !== sourceSegment(older)
+        || Math.abs(newer.time - older.time) > Math.min(newer.maxGapYears ?? Infinity, older.maxGapYears ?? Infinity)) return false;
+    }
+    return true;
+  }
+
+  drawSourceJoins(renderDistance) {
+    // Reserve room for the vertical-axis label and omit join labels that collide
+    // when several recent transitions occupy the same few pixels.
+    const axisLabelLeft = width - max(80, textWidth(this.formatTooltipValue(this.localMinY) + ' ' + this.unit) + 8);
+    let nextLabelRight = axisLabelLeft;
+    const labels = [];
+    strokeWeight(1);
+    for (let i = 1; i < renderDistance; i++) {
+      const newer = this.seriesRows[i - 1];
+      const older = this.seriesRows[i];
+      if (sourceSegment(newer) === sourceSegment(older)) continue;
+      const transitionTime = (this.dataX[i - 1] + this.dataX[i]) / 2;
+      const transitionX = width - oneYear * (transitionTime - this.BP);
+      if (transitionX < shift || transitionX > width) continue;
+      const seaGap = newer.source === 'sea-gauges' && older.source === 'sea-miller';
+      if (seaGap) {
+        const gapLeft = max(shift, width - oneYear * (older.time - this.BP));
+        const gapRight = min(width, width - oneYear * (newer.time - this.BP));
+        noStroke();
+        fill(180, 20);
+        rect(gapLeft, this.rectY + 65, gapRight - gapLeft, max(0, this.rectH - 75));
+      }
+      stroke(180, 110);
+      for (let y = this.rectY + 45; y < this.rectY + this.rectH; y += 10) {
+        line(transitionX, y, transitionX, min(y + 4, this.rectY + this.rectH));
+      }
+      noStroke();
+      fill(190);
+      textAlign(RIGHT, BOTTOM);
+      const label = (SOURCE_INFO[sourceSegment(older)]?.short || sourceSegment(older)) + ' / ' +
+        (SOURCE_INFO[sourceSegment(newer)]?.short || sourceSegment(newer)) + (seaGap ? ' • gap' : '');
+      labels.push({ label, x: transitionX });
+    }
+    labels.sort((a, b) => b.x - a.x);
+    for (const { label, x } of labels) {
+      const labelRight = min(x - 4, axisLabelLeft);
+      const labelLeft = labelRight - textWidth(label);
+      if (labelRight <= nextLabelRight && labelLeft >= shift) {
+        noStroke();
+        fill(0, 32, 64, BACKGROUND_ALPHA_HIGH);
+        rect(labelLeft - 2, this.rectY + this.rectH - 7 - height / TEXT_SIZE_DIVISOR_TINY,
+          labelRight - labelLeft + 4, height / TEXT_SIZE_DIVISOR_TINY + 6);
+        fill(220);
+        text(label, labelRight, this.rectY + this.rectH - 4);
+        nextLabelRight = labelLeft - 8;
+      }
+    }
+  }
+
+  nearestVisibleIndex(timeValue, renderDistance) {
+    if (renderDistance <= 0 || timeValue > this.dataX[0]
+      || timeValue < this.dataX[renderDistance - 1]) return -1;
+    let low = 0;
+    let high = renderDistance - 1;
+    while (low < high) {
+      const mid = Math.floor((low + high) / 2);
+      if (this.dataX[mid] > timeValue) low = mid + 1;
+      else high = mid;
+    }
+    if (low > 0 && Math.abs(this.dataX[low - 1] - timeValue) < Math.abs(this.dataX[low] - timeValue)) return low - 1;
+    return low;
+  }
+
+  drawDataTooltip(y, h, renderDistance) {
+    if (!showCursor || mouseY <= height / GUI_HEIGHT_DIVISOR || mouseY >= height - height / TIMELINE_HEIGHT_DIVISOR) return;
+    const timeAtMouse = this.BP + (width - mouseX - shift) / oneYear;
+    let index = this.nearestVisibleIndex(timeAtMouse, renderDistance);
+    if (index < 0) return;
+    // Several proxy estimates can share an age. Let the cursor choose between
+    // their values instead of always exposing only the first site's estimate.
+    let firstAtAge = index;
+    while (firstAtAge > 0 && this.dataX[firstAtAge - 1] === this.dataX[index]) firstAtAge--;
+    for (let i = firstAtAge; i < renderDistance && this.dataX[i] === this.dataX[index]; i++) {
+      if (abs(mouseY - (y + this.dataY[i] * h)) < abs(mouseY - (y + this.dataY[index] * h))) index = i;
+    }
+    const pointY = y + this.dataY[index] * h;
+    textSize(max(11, min(14, height / TEXT_SIZE_DIVISOR_SMALL)));
+    const valueText = this.formatTooltipValue(this.dataY[index]);
+    const mouseData = this.unit ? valueText + ' ' + this.unit : valueText;
+    const sourceLabel = (showDataSourceTooltip || this.temperatureRows || this.hasSourceJoins)
+      ? sourceLabelForDataPoint(this.seriesRows?.[index])
+      : '';
+    const sourceLine = sourceLabel ? 'Source: ' + sourceLabel : '';
+    const sample = this.seriesRows?.[index];
+    let sampleLine = '';
+    if (sample) {
+      sampleLine = sampleTimeLabel(sample);
+      if (sample.site) sampleLine += ' • site ' + sample.site;
+      if (sample.station) sampleLine += ' • station ' + sample.station;
+      if (Number.isFinite(sample.lower) && Number.isFinite(sample.upper)) {
+        sampleLine += ' • ' + this.formatTooltipValue(sample.lower) + ' to ' + this.formatTooltipValue(sample.upper) + ' ' + this.unit + ' (' + sample.uncertainty + ')';
+      } else if (sample.source === 'hansen') sampleLine += ' • uncertainty not quantified here';
+      if (sample.note) sampleLine += ' • ' + sample.note;
+    }
+    const lines = [mouseData, sourceLine, sampleLine].filter(Boolean)
+      .flatMap(value => wrapTooltipText(value, width - 32));
+    const tooltipWidth = max(...lines.map(value => textWidth(value))) + 12;
+    const lineHeight = max(16, height / TIMELINE_HEIGHT_DIVISOR_SMALL);
+    const tooltipHeight = lines.length * lineHeight + 8;
+    const tooltipX = constrain(mouseX + shift, 8, width - tooltipWidth - 8);
+    const tooltipY = constrain(pointY - tooltipHeight - 8, height / GUI_HEIGHT_DIVISOR + 4,
+      height - height / TIMELINE_HEIGHT_DIVISOR - tooltipHeight - 4);
+    this.dataDist = abs(mouseY - pointY);
+    stroke(this.c);
+    line(mouseX + shift, mouseY, mouseX + shift, pointY);
+    noStroke();
+    rectMode(CORNER);
+    fill(0, 32, 64, BACKGROUND_ALPHA_HIGH);
+    rect(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
+    textAlign(LEFT, TOP);
+    for (let i = 0; i < lines.length; i++) {
+      fill(i === 0 ? this.c : 220);
+      text(lines[i], tooltipX + 6, tooltipY + 4 + i * lineHeight);
+    }
   }
 
   easeToTarget(current, target) {
