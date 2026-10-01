@@ -12,6 +12,8 @@ Then visit `http://localhost:8000/`. The page loads p5.js from a CDN.
 
 The simple top buttons choose the dataset above; temperature stays below. Both panels share a **linear time axis** at every zoom level. Equal distances represent equal amounts of time throughout the view, without the changes in scale used in many static deep-time diagrams.
 
+Zooming in reveals calendar-month markers. Year markers sit on January 1, and the cursor shows dates as **YYYY-MM-DD** in close views. The sample tooltip still shows each dataset's own date and averaging period; a cursor date does not imply daily measurements in a monthly or annual record.
+
 Temperature and most comparison panels automatically fit their vertical ranges to the visible data, placing the lowest and highest visible values at the bottom and top of each panel. Where an uncertainty band is drawn, its bounds are included in the visible range. Orbital eccentricity retains a fixed vertical range. Click temperature's **Scale** label or press **Y** to switch to a fixed range across zoom levels. Each panel shows its vertical limits. Similar-looking slopes across panels do not imply equal physical changes. Click **About the data** or press **H** for the in-app guide.
 
 The bottom curve combines four global temperature estimates, relative to **1961–1990**:

@@ -691,6 +691,97 @@ test('reading the guide allows scrolling without changing the plot', () => {
   delete context.document;
 });
 
+test('calendar ticks use real month boundaries and cursor dates include leap days', () => {
+  const ticks = run('timelineTicks(2024, decimalYearFromYmd(2024,4,1), 1000)');
+  assert.deepEqual([...ticks].map(tick => tick.label), ['Apr 2024', 'Mar 2024', 'Feb 2024', 'Jan 2024']);
+  assert.ok(Math.abs((ticks[1].year - ticks[2].year) * 366 - 29) < 1e-9);
+  assert.ok(Math.abs((ticks[2].year - ticks[3].year) * 366 - 31) < 1e-9);
+  const savedYearScale = run('oneYear');
+  try {
+    run('oneYear = -1000');
+    for (const date of ['2024-02-29', '2024-03-01', '2025-03-01', '2025-12-31', '2026-01-01']) {
+      const [year, month, day] = date.split('-').map(Number);
+      assert.equal(run(`cursorTimeLabel(decimalYearFromYmd(${year},${month},${day}))`), date);
+    }
+  } finally {
+    context.savedYearScale = savedYearScale;
+    run('oneYear = savedYearScale');
+    delete context.savedYearScale;
+  }
+});
+
+test('rendered ticks, cursor and observations agree on calendar dates at desktop and narrow widths', () => {
+  const savedFunctions = { text:context.text, line:context.line, translate:context.translate };
+  const savedWidth = context.width;
+  const savedMouse = { mouseX:context.mouseX, mouseY:context.mouseY };
+  context.savedTimelineState = run('({currentYear, scrollValue, data, event, selectedData, showCursor})');
+  const labels = [], lines = [];
+  let translationX = 0;
+  context.translate = x => { translationX = x; };
+  context.text = (label,x,y) => labels.push({label,x:x+translationX,y});
+  context.line = (x1,y1,x2,y2) => lines.push({x1:x1+translationX,y1,x2:x2+translationX,y2});
+  try {
+    run(`currentYear = decimalYearFromYmd(2026,10,2);
+      const datedRows = [
+        {time:decimalYearFromYmd(2026,9,15)-1950,co2:340,source:'co2-noaa',sampleDate:'2026-09-15'},
+        {time:2026-1950,co2:330,source:'co2-noaa',sampleDate:'2026-01-01'},
+        {time:decimalYearFromYmd(2025,11,1)-1950,co2:320,source:'co2-noaa',sampleDate:'2025-11-01'}
+      ];
+      const datedTable = buildTimeValueTable(datedRows, 'co2', 'CO2');
+      data = [new Data(datedTable,'time','CO2','ppm',0,0,0,true),
+        new Data(datedTable,'time','CO2','ppm',1,0,0,true)];
+      event = []; selectedData = 1; showCursor = true;`);
+    for (const zoom of [1, 10]) {
+      labels.length = 0; lines.length = 0;
+      // October 2 is 274 days after January 1 in this non-leap year.
+      const januaryX = 1280 - (1000 / zoom) * 274 / 365 - 15;
+      context.mouseX = januaryX;
+      context.mouseY = 400;
+      run(`setZoom(${zoom}); draw()`);
+      const tickLabel = labels.find(label => label.y === 690 && label.label === (zoom === 1 ? 'Jan 2026' : '2026'));
+      assert.ok(tickLabel, 'January/year marker is visible');
+      assert.ok(Math.abs(tickLabel.x - januaryX) < 1e-9);
+      assert.equal(labels.find(label => label.y === 660).label, '2026-01-01');
+      assert.ok(lines.some(line => Math.abs(line.x1-januaryX) < 1e-9 && line.y1 === 700 && line.y2 === 720));
+      assert.ok(lines.some(line => line.y1 < 600 && line.y2 < 600
+        && Math.abs(line.x1-line.x2) > 1 && Math.abs(line.x2-januaryX) < 1e-9), 'observation endpoint agrees with marker');
+      assert.ok(labels.some(label => label.label === '2026-01-01' && label.y !== 660), 'sample tooltip agrees with cursor');
+      assert.ok(!labels.some(label => /2027/.test(label.label)), 'no future year is labelled');
+    }
+    context.width = 375;
+    labels.length = 0;
+    context.mouseX = 375 - 1000 * 31 / 365 - 15;
+    run('setZoom(1); draw()');
+    const septemberLabel = labels.find(label => label.y === 690 && label.label === 'Sep 2026');
+    assert.ok(septemberLabel);
+    assert.ok(Math.abs(septemberLabel.x - context.mouseX) < 1e-9);
+    assert.equal(labels.find(label => label.y === 660).label, '2026-09-01');
+    context.mouseX = 0;
+    run('mouseMoved(); draw()');
+    const cursorLabel = labels.filter(label => label.y === 660).at(-1);
+    assert.ok(cursorLabel.x - context.textWidth(cursorLabel.label)/2 >= 4, 'cursor date stays inside viewport');
+  } finally {
+    Object.assign(context, savedFunctions, savedMouse);
+    context.width = savedWidth;
+    run('({currentYear,scrollValue,data,event,selectedData,showCursor} = savedTimelineState); oneYear = -1000/scrollValue; redrawRequested = true');
+    delete context.savedTimelineState;
+  }
+});
+
+test('timeline tick generation stays bounded and aligned from years to cosmological time', () => {
+  for (const zoom of [1,2,5,7,8,25,31,150,500,1000,50000,1000000,70000000,15000000000]) {
+    const ticks = run(`timelineTicks(Math.max(currentYear-13800000000, currentYear-1265*${zoom}/1000), currentYear, 1000/${zoom})`);
+    assert.ok(ticks.length > 0 && ticks.length <= 20);
+    assert.ok(ticks.every(tick => tick.year <= run('currentYear')));
+    assert.ok(ticks.every((tick,index) => index === 0 || tick.year < ticks[index-1].year));
+    if (zoom >= 8) assert.ok(ticks.every(tick => Number.isInteger(tick.year)));
+  }
+  const ancientTicks = run('timelineTicks(50,55,1000)');
+  assert.deepEqual([...ancientTicks].map(tick => tick.year), [55,54,53,52,51,50]);
+  assert.equal(run('timelineTicks(0,Infinity,1).length'), 0);
+  assert.equal(run('timelineTicks(0,2026,0).length'), 0);
+});
+
 test('settled view stops rendering and drawing state remains balanced', () => {
   run('selectComparison(1); setZoom(25)');
   const start = frames.backgrounds;

@@ -18,6 +18,7 @@ const BACKGROUND_ALPHA_HIGH = 230;    // High opacity background
 const STROKE_ALPHA_LOW = 64;          // Low opacity stroke
 const STROKE_ALPHA_MEDIUM = 100;      // Medium opacity stroke
 const TIMELINE_LABEL_MIN_SPACING = 70;
+const CALENDAR_MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const SOLAR_DENSE_SMOOTH_START_TIME = -100; // 1850 CE in year-1950 axis
 const SOLAR_DENSE_SMOOTH_WINDOW_DAYS = 50; // Full width of the centered window
 const SOLAR_ANNUAL_VIEW_YEARS = 200; // Match the older record's annual resolution in long views.
@@ -111,7 +112,6 @@ let pScrollValue = scrollValue;
 let oneYear = 0;                      // Zoom state
 let scrollSpeed = 1;                  // Current scroll speed
 let currentYear = 0;                  // Right-edge timeline anchor (current year plus small buffer)
-let yearShift = 0;                    // Year alignment offset
 let shift = SHIFT_OFFSET;             // Left margin shift
 let showCursor = true;                // Crosshair/tooltip visibility toggle
 let showDataSourceTooltip = false;    // Optional tooltip source label toggle
@@ -229,6 +229,62 @@ function decimalYearFromMilliseconds(milliseconds) {
   const calendarYear = date.getUTCFullYear();
   const start = Date.UTC(calendarYear, 0, 1);
   return calendarYear + (milliseconds - start) / (Date.UTC(calendarYear + 1, 0, 1) - start);
+}
+
+// Plot coordinates include the left-margin translation used by all data panels.
+function plotXFromYear(calendarYear) {
+  return width - oneYear * (calendarYear - currentYear);
+}
+
+function yearFromPlotX(plotX) {
+  return currentYear + (width - plotX) / oneYear;
+}
+
+function cursorTimeLabel(calendarYear) {
+  // Gregorian dates are useful in close views; deep time stays on the numeric axis.
+  if (Math.abs(oneYear) >= 33 && calendarYear >= 100 && calendarYear < 10000) {
+    return new Date(millisecondsFromDecimalYear(calendarYear)).toISOString().slice(0, 10);
+  }
+  if (Math.abs(oneYear) <= 0.1) return nfc(calendarYear, 0);
+  const wholeYear = Math.trunc(calendarYear);
+  return Math.abs(wholeYear) < 10000 ? String(wholeYear) : nfc(wholeYear, 0);
+}
+
+function timelineTicks(startYear, endYear, pixelsPerYear) {
+  const ticks = [];
+  if (!Number.isFinite(startYear) || !Number.isFinite(endYear)
+    || startYear > endYear || !Number.isFinite(pixelsPerYear) || pixelsPerYear <= 0) return ticks;
+
+  // Use actual first-of-month dates, including leap years, rather than year / 12.
+  // Calendar conversion is deliberately limited to the modern calendar range.
+  if (startYear >= 100 && endYear < 10000 && pixelsPerYear >= 2 * TIMELINE_LABEL_MIN_SPACING) {
+    const monthStep = [1, 2, 3, 6].find(step => pixelsPerYear * step / 12 >= TIMELINE_LABEL_MIN_SPACING);
+    const date = new Date(millisecondsFromDecimalYear(endYear));
+    let monthIndex = date.getUTCFullYear() * 12 + date.getUTCMonth();
+    monthIndex -= monthIndex % monthStep;
+    for (; ; monthIndex -= monthStep) {
+      const calendarYear = Math.floor(monthIndex / 12);
+      const monthIndexInYear = monthIndex % 12;
+      const tickYear = decimalYearFromYmd(calendarYear, monthIndexInYear + 1, 1);
+      if (tickYear < startYear) break;
+      if (tickYear <= endYear) {
+        ticks.push({ year: tickYear, label: CALENDAR_MONTH_LABELS[monthIndexInYear] + ' ' + calendarYear });
+      }
+    }
+    return ticks;
+  }
+
+  // Whole-year ticks are exact multiples of a 1/2/5 interval at every scale.
+  const minimumStep = Math.max(1, TIMELINE_LABEL_MIN_SPACING / pixelsPerYear);
+  const magnitude = 10 ** Math.floor(Math.log10(minimumStep));
+  const step = [1, 2, 5, 10].find(value => value * magnitude >= minimumStep) * magnitude;
+  const firstIndex = Math.floor(endYear / step);
+  const lastIndex = Math.ceil(startYear / step);
+  for (let index = firstIndex; index >= lastIndex; index--) {
+    const tickYear = index * step;
+    ticks.push({ year: tickYear, label: Math.abs(tickYear) < 10000 ? String(tickYear) : nfc(tickYear, 0) });
+  }
+  return ticks;
 }
 
 function matchedMonthlyOffset(sourceRows, referenceRows, valueKey, start = -Infinity, end = Infinity) {
@@ -1444,47 +1500,19 @@ function draw() {
     }
 
     // Draw crosshair and time readout
-    if (showCursor && mouseY > height / GUI_HEIGHT_DIVISOR) {
+    if (showCursor && mouseX >= 0 && mouseX <= width - shift && mouseY > height / GUI_HEIGHT_DIVISOR) {
       fill(255);
       stroke(255, STROKE_ALPHA_LOW);
       line(mouseX + shift, height - height / TIMELINE_HEIGHT_DIVISOR_SMALL, mouseX + shift, height); // Vertical line to timeline
       line(mouseX + shift, mouseY, mouseX + shift, height - height / 9); // Vertical line to data
       noStroke();
-      textSize(height / TEXT_SIZE_DIVISOR_SMALL);
+      textSize(Math.max(11, height / TEXT_SIZE_DIVISOR_SMALL));
       textAlign(CENTER, BASELINE);
-      // Format time display based on zoom level
-      if (oneYear <= -33) text(((width - (mouseX + shift)) / oneYear) + currentYear, mouseX + shift, height - height / GUI_HEIGHT_DIVISOR);
-      if (oneYear < -0.1 && oneYear > -33) text(int(((width - (mouseX + shift)) / oneYear) + currentYear), mouseX + shift, height - height / GUI_HEIGHT_DIVISOR);
-      if (oneYear >= -0.1) text(nfc(((width - (mouseX + shift)) / oneYear + currentYear), 0), mouseX + shift, height - height / GUI_HEIGHT_DIVISOR);
+      const label = cursorTimeLabel(yearFromPlotX(mouseX + shift));
+      const halfLabelWidth = textWidth(label) / 2;
+      const labelX = constrain(mouseX + shift, shift + halfLabelWidth + 4, width - halfLabelWidth - 4);
+      text(label, labelX, height - height / GUI_HEIGHT_DIVISOR);
     }
-
-    // Calculate timeline tick spacing based on zoom level
-    let v = 1; // Tick interval in years
-    yearShift = 0; // Year alignment offset
-
-    // Progressive tick spacing for different zoom levels
-    if (scrollValue > 30) v = 10;
-    if (scrollValue > 30) yearShift = round((currentYear * 0.1)) * 10 - currentYear;
-    if (scrollValue > 150) v = 50;
-    if (scrollValue > 150) yearShift = round((currentYear * 0.01)) * 100 - currentYear;
-    if (scrollValue > 500) v = 100;
-    if (scrollValue > 500) yearShift = round((currentYear * 0.001)) * 1000 - currentYear;
-    if (scrollValue > 1000) v = 500;
-    if (scrollValue > 5000) v = 1000;
-    if (scrollValue > 10000) v = 5000;
-    if (scrollValue > 50000) v = 10000;
-    if (scrollValue > 50000) yearShift = round((currentYear * 0.0001)) * 10000 - currentYear;
-    if (scrollValue > 100000) v = 50000;
-    if (scrollValue > 500000) v = 100000;
-    if (scrollValue > 1000000) v = 500000;
-    if (scrollValue > 5000000) v = 1000000;
-    if (scrollValue > 10000000) v = 5000000;
-    if (scrollValue > 50000000) v = 10000000;
-    if (scrollValue > 100000000) v = 50000000;
-    if (scrollValue > 400000000) v = 100000000;
-    if (scrollValue > 800000000) v = 500000000;
-    if (scrollValue > 3000000000) v = 1000000000;
-    if (scrollValue > 8000000000) v = 5000000000;
 
     // Draw right margin background
     fill(0);
@@ -1495,28 +1523,27 @@ function draw() {
     fill(255);
     stroke(0);
     textAlign(CENTER, BASELINE);
-    const minLabelSpacing = TIMELINE_LABEL_MIN_SPACING;
-    let lastLabelX = -1000000;
-    for (let i = width - (oneYear * yearShift), y = yearShift; i > 0; i -= (1.0 / scrollValue) * (1000.0 * v), y -= v) {
-      let label = nf(y + currentYear, 0, 0);
-      if (scrollValue >= 50000) label = nfc(y + currentYear, 0); // Use comma formatting for large numbers
-      if (y > -13800000000) { // Don't draw ticks beyond universe age
-        perfTimelineTicks++;
-        stroke(255);
-        if (abs(i - lastLabelX) >= minLabelSpacing) {
-          noStroke();
-          text(label, i, height - height / 24);
-          lastLabelX = i;
-          perfTimelineLabels++;
-        }
-        stroke(255);
-        line(i, height - height / TIMELINE_HEIGHT_DIVISOR_SMALL, i, height);
+    textSize(Math.max(11, Math.min(14, height / TEXT_SIZE_DIVISOR_SMALL)));
+    let lastLabelLeft = Infinity;
+    const universeStartYear = currentYear - 13800000000;
+    const ticks = timelineTicks(Math.max(universeStartYear, yearFromPlotX(shift)), currentYear, Math.abs(oneYear));
+    for (const tick of ticks) {
+      const x = plotXFromYear(tick.year);
+      const halfLabelWidth = textWidth(tick.label) / 2;
+      perfTimelineTicks++;
+      if (x - halfLabelWidth >= shift + 4 && x + halfLabelWidth <= width - 4
+        && x + halfLabelWidth + 8 <= lastLabelLeft) {
+        noStroke();
+        text(tick.label, x, height - height / 24);
+        lastLabelLeft = x - halfLabelWidth;
+        perfTimelineLabels++;
       }
+      stroke(255);
+      line(x, height - height / TIMELINE_HEIGHT_DIVISOR_SMALL, x, height);
     }
 
     // Draw universe age boundary line
-    let x = 0;
-    x = width - (oneYear * yearShift) - (1.0 / scrollValue) * 1000.0 * 13800000000;
+    const x = plotXFromYear(universeStartYear);
     line(x, height, x, -height); // Vertical line at universe age
 
     textAlign(LEFT, BASELINE);
