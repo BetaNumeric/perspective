@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "datasets": {
+    "giss": {
+      "url": "https://data.giss.nasa.gov/gistemp/tabledata_v4/GLB.Ts+dSST.txt",
+      "path": "data/temperature/GLB.Ts+dSST.txt",
+      "units": "0.01 degrees Celsius relative to 1951-1980",
+      "retrieved_at": "2026-10-01T18:23:36+00:00",
+      "first_observation": "1880-01-01",
+      "latest_observation": "2026-08-01",
+      "observation_count": 1760,
+      "sha256": "b7e9f5c771bac16ca14dc32c4e50c220c48cc0aa6c594f5cb6bebfc31f7aae38"
+    },
+    "noaa-co2": {
+      "url": "https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_daily_mlo.txt",
+      "path": "data/co2/co2_daily_mlo.txt",
+      "units": "ppm",
+      "retrieved_at": "2026-10-01T18:23:37+00:00",
+      "first_observation": "1974-05-19",
+      "latest_observation": "2026-09-30",
+      "observation_count": 15992,
+      "sha256": "11c7a3bb7a299cfd821c5e09902de16816680e57aef16b52ccd3a09a9203d16d"
+    },
+    "tsis": {
+      "url": "https://lasp.colorado.edu/lisird/latis/dap/tsis_tsi_24hr.txt",
+      "path": "data/solar/tsis_tsi_24hr.txt",
+      "units": "W/m2 at 1 AU",
+      "retrieved_at": "2026-10-01T18:23:39+00:00",
+      "first_observation": "2018-01-11",
+      "latest_observation": "2026-09-25",
+      "observation_count": 2721,
+      "sha256": "5339b86a528371e03fcb095af211f971e31f8543c129996b8a5c395c60ea9b41"
+    },
+    "colorado": {
+      "url": "https://sealevel.colorado.edu/files/2026_rel2/gmsl_2026rel2_seasons_retained.txt",
+      "path": "data/sealevel/gmsl_2026rel2_seasons_retained.txt",
+      "units": "mm, GIA removed, seasonal cycle retained",
+      "retrieved_at": "2026-10-01T18:23:39+00:00",
+      "first_observation": "1992-12-17",
+      "latest_observation": "2026-06-27",
+      "observation_count": 1203,
+      "sha256": "862cd6728dba3751724250ed45d3b62bcfa2552fbc2ae605bf7d90f4b0472136"
+    }
+  }
+}
