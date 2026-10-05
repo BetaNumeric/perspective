@@ -82,10 +82,11 @@ test('global temperature uses baseline offsets without changing variability', ()
       giss: parseGissTemperatureRows(sourceTables.gissTempRaw),
       pages: parseNeukomTemperatureRows(sourceTables.neukomTempRaw),
       osman: parseOsmanTemperatureRows(sourceTables.osmanTempRaw),
+      snyder: parseSnyderTemperatureRows(sourceTables.snyderTempRaw),
       hansen: parseHansenTemperatureRows(sourceTables.hansenTempRaw)
     };
     const offsets = { giss: -temperatureCalibration.gissOffset, pages: 0,
-      osman: temperatureCalibration.osmanOffset, hansen: -14 };
+      osman: temperatureCalibration.osmanOffset, snyder: temperatureCalibration.snyderOffset, hansen: -14 };
     let preserved = true;
     for (const source of Object.keys(originals)) {
       const byTime = new Map();
@@ -104,7 +105,7 @@ test('global temperature uses baseline offsets without changing variability', ()
       referenceMean: reference.reduce((sum, row) => sum + row.temperature, 0) / reference.length,
       deepMaximum: Math.max(...rows.filter(row => row.source === 'hansen').map(row => row.temperature)) };
   })()`);
-  assert.deepEqual([...result.sources], ['giss', 'pages', 'osman', 'hansen']);
+  assert.deepEqual([...result.sources], ['giss', 'pages', 'osman', 'snyder', 'hansen']);
   assert.equal(result.preserved, true);
   assert.ok(Math.abs(result.referenceMean) < 1e-12);
   assert.ok(result.deepMaximum > 10);
@@ -124,6 +125,59 @@ test('Osman alignment compares the same complete 200-year periods with PAGES2k',
   assert.ok(Math.abs(result.difference) < 1e-12);
 });
 
+test('Snyder converts its published 0–5 ka reference without fitting the glacial endpoints', () => {
+  const result = run(`(() => {
+    const original = parseSnyderTemperatureRows(sourceTables.snyderTempRaw);
+    const osman = parseOsmanTemperatureRows(sourceTables.osmanTempRaw);
+    const reference = osman.filter(row => row.time > -5000 && row.time < 0);
+    const mean = reference.reduce((sum, row) => sum + row.temperature, 0) / reference.length;
+    const rows = sourceTables.temperature.temperatureRows;
+    const bridge = rows.filter(row => row.source === 'snyder');
+    const retainedOsman = rows.filter(row => row.source === 'osman');
+    const retainedHansen = rows.filter(row => row.source === 'hansen');
+    const coldest = bridge.reduce((a, b) => a.temperature < b.temperature ? a : b);
+    return { rawCount: original.length, median21ka: original.find(row => row.time === -21000).temperature,
+      referenceBins: reference.length, offset: temperatureCalibration.snyderOffset,
+      expectedOffset: mean + temperatureCalibration.osmanOffset,
+      bridgeCount: bridge.length, newest: bridge[0].time, oldest: bridge.at(-1).time,
+      osmanOldest: retainedOsman.at(-1).time, hansenNewest: retainedHansen[0].time,
+      recentStep: Math.abs(bridge[0].temperature - retainedOsman.at(-1).temperature),
+      ancientStep: Math.abs(bridge.at(-1).temperature - retainedHansen[0].temperature),
+      coldestTime: coldest.time, coldestValue: coldest.temperature,
+      coldestOsman: Math.min(...retainedOsman.map(row => row.temperature)) };
+  })()`);
+  assert.equal(result.rawCount, 2000);
+  assert.equal(result.median21ka, -6.2575806621948002);
+  assert.equal(result.referenceBins, 25);
+  assert.ok(Math.abs(result.offset - result.expectedOffset) < 1e-12);
+  assert.equal(result.bridgeCount, 1977);
+  assert.equal(result.newest, -24000);
+  assert.equal(result.oldest, -2000000);
+  assert.equal(result.osmanOldest, -23900);
+  assert.ok(result.hansenNewest < -2000000);
+  assert.ok(result.recentStep < 0.3);
+  assert.ok(result.ancientStep > 1, 'the older disagreement remains visible rather than being fitted away');
+  assert.equal(result.coldestTime, -802000);
+  assert.ok(Math.abs(result.coldestValue - result.coldestOsman) < 0.1);
+});
+
+test('the Snyder bridge refuses incomplete reference periods or a damaged evaluation grid', () => {
+  const expression = `(() => {
+    const giss = parseGissTemperatureRows(sourceTables.gissTempRaw);
+    const pages = parseNeukomTemperatureRows(sourceTables.neukomTempRaw);
+    const osman = parseOsmanTemperatureRows(sourceTables.osmanTempRaw);
+    const snyder = parseSnyderTemperatureRows(sourceTables.snyderTempRaw);
+    const hansen = parseHansenTemperatureRows(sourceTables.hansenTempRaw);
+    CALL;
+  })()`;
+  assert.throws(() => run(expression.replace('CALL',
+    'buildCombinedTemperatureTable(giss, pages, osman.filter(row => row.time !== -4900), snyder, hansen)')),
+    /all 25 Osman bins/);
+  assert.throws(() => run(expression.replace('CALL',
+    'buildCombinedTemperatureTable(giss, pages, osman, snyder.slice(1), hansen)')),
+    /complete 1–2000 ka evaluation grid/);
+});
+
 test('temperature and ice-core bands keep the published uncertainty definitions and widths', () => {
   const result = run(`(() => {
     const temperature = data[0];
@@ -134,13 +188,14 @@ test('temperature and ice-core bands keep the published uncertainty definitions 
       temperatureBand: temperature.hasUncertaintyBands,
       valid: temperature.seriesRows.filter(row => row.band).every(row =>
         row.lower <= row.temperature && row.temperature <= row.upper &&
-        row.uncertainty === (row.source === 'pages' ? '95% ensemble range' : '±1σ ensemble spread')),
+        row.uncertainty === ({pages:'95% ensemble range', osman:'±1σ ensemble spread',
+          snyder:'95% reconstruction interval'})[row.source]),
       iceCount: ice.length,
       icePreserved: ice.every(row => row.band && row.uncertainty === '±1σ measurement uncertainty' &&
         row.co2 === originalIce.get(row.time).co2 && row.lower === originalIce.get(row.time).lower &&
         row.upper === originalIce.get(row.time).upper) };
   })()`);
-  assert.deepEqual([...result.sources], ['pages', 'osman']);
+  assert.deepEqual([...result.sources], ['pages', 'osman', 'snyder']);
   assert.equal(result.temperatureBand, true);
   assert.equal(result.valid, true);
   assert.ok(result.iceCount > 1000);
@@ -158,7 +213,7 @@ test('published temperature and ice-core bands render separately and fit the vis
   context.vertex = (x,y) => vertices.push([x,y]);
   context.endShape = () => polygons.push({vertices,clipped});
   try {
-    for (const [dataset, years, expectedSources] of [[0,30000,['pages','osman']], [1,900000,['co2-ice']]]) {
+    for (const [dataset, years, expectedSources] of [[0,30000,['pages','osman','snyder']], [1,900000,['co2-ice']]]) {
       polygons.length = 0;
       const state = run(`(() => {
         setZoom(${years} * 1000 / (width - shift)); oneYear = -1000 / scrollValue;
@@ -168,6 +223,9 @@ test('published temperature and ice-core bands render separately and fit the vis
         return {sources: [...new Set(series.seriesRows.slice(0,count).filter(row => row.band).map(row => row.source))],
           samples: series.seriesRows.slice(0,count).filter(row => row.band).map(row => ({
             x:width - oneYear * (row.time - series.BP), lower:row.lower, upper:row.upper})),
+          renderedSampleX: series.seriesRows.slice(0,count+1).filter(row => row.band)
+            .map(row => width - oneYear * (row.time - series.BP)),
+          edge:series.leftEdgeValueBounds(count), left:shift,
           minimum:series.localMinY, maximum:series.localMaxY,
           top:series.rectY, bottom:series.rectY+series.rectH};
       })()`);
@@ -175,12 +233,14 @@ test('published temperature and ice-core bands render separately and fit the vis
       assert.equal(polygons.length, expectedSources.length);
       for (const polygon of polygons) {
         assert.equal(polygon.clipped, true);
-        assert.ok(polygon.vertices.every(([,y]) => y >= state.top-1e-9 && y <= state.bottom+1e-9));
+        assert.ok(polygon.vertices.filter(([x]) => x >= state.left)
+          .every(([,y]) => y >= state.top-1e-9 && y <= state.bottom+1e-9));
         for (const [x] of polygon.vertices) {
-          assert.ok(state.samples.some(sample => Math.abs(sample.x-x)<1e-9), 'band vertices retain published sample dates');
+          assert.ok(state.renderedSampleX.some(sampleX => Math.abs(sampleX-x)<1e-9), 'band vertices retain published sample dates');
         }
       }
       assert.ok(state.samples.every(sample => sample.lower >= state.minimum-1e-12 && sample.upper <= state.maximum+1e-12));
+      if (state.edge) assert.ok(state.edge[0] >= state.minimum-1e-12 && state.edge[1] <= state.maximum+1e-12);
     }
   } finally {
     Object.assign(context, {beginShape:saved.beginShape,vertex:saved.vertex,endShape:saved.endShape});
@@ -202,7 +262,7 @@ test('rendering preserves both sides of every source join and leaves it disconne
     }
     return joins;
   })()`);
-  assert.equal(result.length, 3);
+  assert.equal(result.length, 4);
   assert.ok(result.every(join => join.retained && !join.connected));
 });
 
@@ -831,7 +891,8 @@ test('compact mobile tooltips retain dates, source, uncertainty and essential so
   try {
     for (const [dataset, source, period, uncertainty] of [
       [0,'giss','',null], [0,'pages','Apr–Mar annual','95% ensemble'],
-      [0,'osman','200-year mean','±1σ ensemble'], [1,'co2-ice','','±1σ measurement'],
+      [0,'osman','200-year mean','±1σ ensemble'], [0,'snyder','1,000-year grid','95% reconstruction'],
+      [1,'co2-ice','','±1σ measurement'],
       [1,'co2-cencopip','500,000-year mean','95% credible'],
       [5,'sea-kopp','','±1σ posterior'], [5,'sea-lambeck','','±2σ accuracy'],
       [6,'population-projection','',null]

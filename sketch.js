@@ -21,6 +21,7 @@ function preload() {
 
   // Temperature (oldest -> newest)
   sourceTables.hansenTempRaw = loadSourceLines('data/temperature/Table.txt');
+  sourceTables.snyderTempRaw = loadSourceLines('data/temperature/snyder2016-gast.csv');
   sourceTables.osmanTempRaw = loadSourceLines('data/temperature/osman2021-gmst.csv');
   sourceTables.neukomTempRaw = loadSourceLines('data/temperature/Full_ensemble_median_and_95pct_range.txt');
   sourceTables.gissTempRaw = loadSourceLines('data/temperature/GLB.Ts+dSST.txt');
@@ -95,6 +96,7 @@ function initializeView() {
     parseGissTemperatureRows(sourceTables.gissTempRaw),
     parseNeukomTemperatureRows(sourceTables.neukomTempRaw),
     parseOsmanTemperatureRows(sourceTables.osmanTempRaw),
+    parseSnyderTemperatureRows(sourceTables.snyderTempRaw),
     parseHansenTemperatureRows(sourceTables.hansenTempRaw));
   sourceTables.solarBase = buildTimeValueTable(
     parsePmipSolarRows(sourceTables.solarIrradiance),

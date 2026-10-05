@@ -16,20 +16,23 @@ Zooming in reveals calendar-month markers. Year markers sit on January 1, and th
 
 Temperature and most comparison panels automatically fit their vertical ranges to the visible values and drawn uncertainty bands. For a continuous line or band crossing the left edge, scaling includes its intersection with the viewport so that sparse records reach the edge without being clipped vertically. The off-screen endpoint does not set the visible range, and no measurements are added. Orbital eccentricity retains a fixed vertical range. Hover to read values and units. Similar-looking slopes across panels do not imply equal physical changes. Click the circular **i** button at the bottom left of the temperature panel for the in-app guide, dataset details and GitHub links. Close it with **×**, **Escape**, or a click outside the panel.
 
-The bottom curve combines four global temperature estimates, relative to **1961–1990**:
+The bottom curve combines five global temperature estimates, relative to **1961–1990**:
 
 | Segment | Source | Reference conversion |
 | --- | --- | --- |
-| Older than 24,000 years BP | Hansen et al. (2013) global surface estimate | Subtract the author's 14 °C estimate for 1961–1990 |
+| Older than 2 million years BP | Hansen et al. (2013) global surface estimate | Subtract the author's 14 °C estimate for 1961–1990 |
+| 2 million to 24,000 years BP | Snyder (2016) global surface reconstruction, 1,000-year evaluation grid | Add Osman's aligned mean over Snyder's published 0–5,000 BP reference period |
 | 24,000 years BP to before 1 CE | Osman et al. (2021) global reconstruction, 200-year means | Constant offset estimated over the 150–1750 CE overlap with PAGES2k |
 | 1–1879 CE | PAGES2k / Neukom et al. (2019), annual ensemble median | Already relative to 1961–1990 |
 | 1880 CE onward | NASA GISS, monthly observations | Subtract its mean of all 360 months in 1961–1990 |
 
-For Osman, each of eight complete 200-year bins is compared with the mean of the same 200 annual PAGES2k values. The average difference sets a single offset for the entire Osman series. This alignment is an application assumption, not a published homogeneous temperature product. No source is multiplied to match another source's variability. EPICA is retained on disk as an Antarctic record and is excluded from the global curve.
+For Osman, each of eight complete 200-year bins is compared with the mean of the same 200 annual PAGES2k values. The average difference sets a single offset for the entire Osman series. Snyder's published anomalies use the 0–5,000 BP mean as their reference. The mean of all 25 Osman bins covering that period, after its alignment, supplies Snyder's constant reference shift. These alignments are application assumptions, not a published homogeneous temperature product. No source is multiplied to match another source's variability. EPICA is retained on disk as an Antarctic record and is excluded from the global curve.
 
-Dashed markers identify joins. The line and shading break at every source change: the app does not interpolate or force endpoints to meet. Shading shows the published PAGES2k 95% ensemble range and Osman ±1σ ensemble spread, with bounds shifted by the same reference offsets as the central values. These measures are different. They do not display horizontal dating uncertainty or add uncertainty for baseline alignment and other differences between sources. GISS and Hansen have no uncertainty band in this view; that does not imply exact values.
+Dashed markers identify joins. The line and shading break at every source change: the app does not interpolate or force endpoints to meet. Shading shows the published PAGES2k 95% ensemble range, Snyder 2.5th–97.5th percentile reconstruction interval, and Osman ±1σ ensemble spread, with bounds shifted by the same reference offsets as the central values. These measures are different. They do not display horizontal dating uncertainty or add uncertainty for baseline alignment and other differences between sources. GISS and Hansen have no uncertainty band in this view; that does not imply exact values.
 
 These records estimate global surface temperature using different methods, temporal averages and temperature definitions. GISS blends land air temperatures and sea surface temperatures; Osman reconstructs near-surface air temperature. A reference offset does not remove these differences. Older points cannot resolve the monthly changes in modern observations. This composite is useful for broad educational context, not for calculating precise warming rates or lags across its joins. Holocene reconstructions also disagree about long-term trends; the chosen Osman segment is one published estimate.
+
+[Snyder's reconstruction](https://doi.org/10.1038/nature19798) estimates global surface temperature from spatially weighted marine proxies and climate-model scaling, with those uncertainties propagated in its ensemble. Its 1,000-year grid is not a sequence of independent observations or 1,000-year means: dating uncertainty smooths the reconstruction, particularly rapid changes. It replaces Hansen's older calibration through earlier glacial cycles, reducing the impression that the last ice age was uniquely cold. Earlier glacial minima can be comparable, but differences in methods, resolution and uncertainty prevent ranking the coldest period across the full 65-million-year composite. Hansen remains independently referenced beyond 2 million years, with its disagreement at that join visible.
 
 The six top buttons now provide these comparisons:
 
@@ -75,7 +78,13 @@ python -m pip install pypdf==6.19.0
 python scripts/build_lambeck_sealevel.py --verify-pdf
 ```
 
-The Pages workflow runs both suites before publishing normal changes or updated observations. Build-script tests use synthetic fixtures and check the bundled sea-level extractions against their verified source files, leaving the snapshots untouched. Ordinary checks need no PDF packages.
+Rebuild Snyder's temperature CSV from the checksum-pinned publisher workbook with the standard library:
+
+```sh
+python scripts/build_snyder_temperature.py
+```
+
+The Pages workflow runs both suites before publishing normal changes or updated observations. Build-script tests use synthetic fixtures and check the bundled sea-level and Snyder extractions against their verified source files, leaving the snapshots untouched. Ordinary checks need no PDF packages.
 
 Reproduce the solar CSV from its original provider input with:
 

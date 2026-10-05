@@ -106,7 +106,21 @@ function parseHansenTemperatureRows(rawLines) {
   return sortRowsByTimeDesc(rows);
 }
 
-function buildCombinedTemperatureTable(gissRows, pagesRows, osmanRows, hansenRows) {
+function parseSnyderTemperatureRows(rawLines) {
+  const rows = [];
+  for (const rawLine of rawLines || []) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const values = line.split(',').map(Number);
+    if (values.length !== 4 || !values.every(Number.isFinite)) continue;
+    const [ageKaBp, temperature, lower, upper] = values;
+    if (ageKaBp <= 0 || lower > temperature || upper < temperature) continue;
+    rows.push({ time: -ageKaBp * 1000, temperature, lower, upper, band: true });
+  }
+  return sortRowsByTimeDesc(rows);
+}
+
+function buildCombinedTemperatureTable(gissRows, pagesRows, osmanRows, snyderRows, hansenRows) {
   const gissReference = gissRows.filter(row => row.time >= 11 && row.time < 41);
   if (gissReference.length !== 360) throw new Error('GISS requires all 360 months of the 1961–1990 reference period');
   const gissOffset = gissReference.reduce((sum, row) => sum + row.temperature, 0) / gissReference.length;
@@ -118,7 +132,17 @@ function buildCombinedTemperatureTable(gissRows, pagesRows, osmanRows, hansenRow
     return target.reduce((sum, row) => sum + row.temperature, 0) / target.length - bin.temperature;
   });
   const osmanOffset = binOffsets.reduce((sum, value) => sum + value, 0) / binOffsets.length;
-  temperatureCalibration = { gissOffset, osmanOffset, hansenReference: 14, overlap: '150–1750 CE' };
+  const snyderReference = osmanRows.filter(row => row.time > -5000 && row.time < 0);
+  if (snyderReference.length !== 25 || snyderReference.some((row, index) => row.time !== -100 - index * 200)) {
+    throw new Error('Snyder alignment requires all 25 Osman bins covering 0–5000 BP');
+  }
+  if (snyderRows.length !== 2000 || snyderRows.some((row, index) => row.time !== -(index + 1) * 1000)) {
+    throw new Error('Snyder requires its complete 1–2000 ka evaluation grid');
+  }
+  // Snyder anomalies already use the 0–5 ka mean; convert that reference using Osman.
+  const snyderOffset = snyderReference.reduce((sum, row) => sum + row.temperature + osmanOffset, 0) / snyderReference.length;
+  temperatureCalibration = { gissOffset, osmanOffset, snyderOffset,
+    snyderReference: '0–5000 BP', hansenReference: 14, overlap: '150–1750 CE' };
 
   const rows = [];
   function append(sourceRows, source, offset, include, uncertainty = '') {
@@ -133,7 +157,8 @@ function buildCombinedTemperatureTable(gissRows, pagesRows, osmanRows, hansenRow
   append(gissRows, 'giss', -gissOffset, time => time >= -70);
   append(pagesRows, 'pages', 0, time => time >= -1949 && time < -70, '95% ensemble range');
   append(osmanRows, 'osman', osmanOffset, time => time < -1949, '±1σ ensemble spread');
-  append(hansenRows, 'hansen', -14, time => time < -24000);
+  append(snyderRows, 'snyder', snyderOffset, time => time <= -24000, '95% reconstruction interval');
+  append(hansenRows, 'hansen', -14, time => time < -2000000);
   sortRowsByTimeDesc(rows);
   const table = buildTimeValueTable(rows, 'temperature', 'Temperature');
   table.temperatureRows = rows; // Keep provenance and uncertainty with each plotted sample.

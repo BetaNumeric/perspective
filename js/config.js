@@ -30,6 +30,7 @@ const SOURCE_INFO = {
   giss: { short: 'GISS', label: 'NASA GISS • monthly observations', cadence: 'month' },
   pages: { short: 'PAGES2k', label: 'PAGES2k • annual April–March reconstruction', cadence: 'year', period: 'Apr–Mar annual', uncertainty: '95% ensemble' },
   osman: { short: 'Osman', label: 'Osman 2021 • 200-year means • estimated baseline', period: '200-year mean', uncertainty: '±1σ ensemble' },
+  snyder: { short: 'Snyder', label: 'Snyder 2016 • global surface reconstruction • estimated baseline', period: '1,000-year grid', uncertainty: '95% reconstruction' },
   hansen: { short: 'Hansen', label: 'Hansen 2013 • coarse global temperature estimate' },
   'co2-noaa': { short: 'NOAA', label: 'NOAA • Mauna Loa / Maunakea daily observations', cadence: 'day' },
   'co2-scripps': { short: 'Scripps', label: 'Scripps • Mauna Loa daily observations', cadence: 'day' },
