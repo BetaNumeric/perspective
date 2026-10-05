@@ -49,6 +49,7 @@ function parseNeukomTemperatureRows(rawLines) {
     rows.push({
       time: yearCe - 1950,
       temperature: median,
+      band: true,
       lower: parseFloat(tokens[3]),
       upper: parseFloat(tokens[4])
     });
@@ -72,6 +73,7 @@ function parseOsmanTemperatureRows(rawLines) {
     rows.push({
       time: -ageCalBp,
       temperature,
+      band: true,
       lower: temperature - standardDeviation,
       upper: temperature + standardDeviation
     });

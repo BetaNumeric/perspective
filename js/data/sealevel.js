@@ -74,7 +74,52 @@ function parseMiller2024SeaLevelRows(rawLines) {
   return sortRowsByTimeDesc(rows);
 }
 
-function buildCombinedSeaLevelTable(coloradoRows, gpRows, millerRows) {
+function parseKopp2016SeaLevelRows(rawLines) {
+  const rows = [];
+  for (const raw of rawLines || []) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#') || line.startsWith('year_ce,')) continue;
+    const tokens = line.split(',');
+    const values = tokens.map(Number);
+    if (values.length !== 3 || tokens.some(token => !token.trim())
+      || !values.every(Number.isFinite) || values[2] < 0) {
+      throw new Error('Invalid Kopp global posterior row');
+    }
+    const [yearCe, meanMm, standardDeviationMm] = values;
+    rows.push({
+      time: yearCe - 1950, sealevel: meanMm / 1000,
+      lower: (meanMm - standardDeviationMm) / 1000,
+      upper: (meanMm + standardDeviationMm) / 1000,
+      source: 'sea-kopp', band: true, uncertainty: '±1σ global posterior',
+      note: 'Reconstruction grid; short-term changes are unresolved'
+    });
+  }
+  return sortRowsByTimeDesc(rows);
+}
+
+function parseLambeck2014SeaLevelRows(rawLines) {
+  const rows = [];
+  for (const raw of rawLines || []) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#') || line.startsWith('age_ka_bp,')) continue;
+    const tokens = line.split(',');
+    const values = tokens.map(Number);
+    if (values.length !== 4 || tokens.some(token => !token.trim())
+      || !values.every(Number.isFinite) || values[0] < 0 || values[3] < 0) {
+      throw new Error('Invalid Lambeck Table S3 row');
+    }
+    const [ageKaBp, , bestEstimate, twoSigma] = values;
+    rows.push({
+      time: -ageKaBp * 1000, sealevel: bestEstimate,
+      lower: bestEstimate - twoSigma, upper: bestEstimate + twoSigma,
+      source: 'sea-lambeck', band: true, uncertainty: '±2σ published accuracy',
+      note: 'Ice-volume equivalent; excludes thermal expansion'
+    });
+  }
+  return sortRowsByTimeDesc(rows);
+}
+
+function buildCombinedSeaLevelTable(coloradoRows, gpRows, millerRows, koppRows, lambeckRows) {
   // Modern observations have arbitrary datums. Anchor the tide-gauge curve to
   // its 1950 mean, then align satellite observations using matching months.
   const reference = gpRows.filter(row => row.time >= 0 && row.time < 1);
@@ -91,11 +136,25 @@ function buildCombinedSeaLevelTable(coloradoRows, gpRows, millerRows) {
   const zeroAge = millerRows.find(row => row.time === 0);
   if (!zeroAge) throw new Error('Miller requires its published zero-age reference');
   const geological = offsetValueRows(millerRows, 'sealevel', -zeroAge.sealevel);
-  seaLevelCalibration = { gpReference, satelliteOffset, millerReference: zeroAge.sealevel };
+  const koppReference = koppRows.find(row => row.time === 0);
+  if (!koppReference) throw new Error('Kopp requires its published 1950 reference point');
+  const commonEra = offsetValueRows(koppRows, 'sealevel', -koppReference.sealevel);
+  const lambeckReference = lambeckRows.find(row => row.time === 0);
+  if (!lambeckReference) throw new Error('Lambeck requires its published zero-age reference');
+  const postglacial = offsetValueRows(lambeckRows, 'sealevel', -lambeckReference.sealevel);
+  seaLevelCalibration = { gpReference, satelliteOffset, millerReference: zeroAge.sealevel,
+    koppReference: koppReference.sealevel, lambeckReference: lambeckReference.sealevel };
   const oldestSatellite = satellites.at(-1)?.time ?? Infinity;
   const olderGp = gp.filter(row => row.time < oldestSatellite);
   const oldestModern = olderGp.at(-1)?.time ?? satellites.at(-1)?.time ?? Infinity;
+  const olderKopp = commonEra.filter(row => row.time < oldestModern);
+  if (!olderKopp.length) throw new Error('Kopp must supply the pre-instrumental sea-level segment');
+  const oldestKopp = olderKopp.at(-1).time;
+  const olderLambeck = postglacial.filter(row => row.time < oldestKopp);
+  if (!olderLambeck.length) throw new Error('Lambeck must supply the postglacial sea-level segment');
+  const oldestLambeck = olderLambeck.at(-1).time;
   return buildTimeValueTable(sortRowsByTimeDesc([
-    ...satellites, ...olderGp, ...geological.filter(row => row.time < oldestModern)
+    ...satellites, ...olderGp, ...olderKopp, ...olderLambeck,
+    ...geological.filter(row => row.time < oldestLambeck)
   ]), 'sealevel', 'Sealevel');
 }

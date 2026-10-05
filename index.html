@@ -27,8 +27,7 @@
     <div class="info-content">
     <p>Choose a dataset above to compare with global temperature below. Scroll to
       zoom; time stays linear at every zoom. Hover to read values, dates and sources.</p>
-    <p>Dashed markers and breaks show source joins. Bands show reported uncertainty;
-      sea level's shaded gap marks missing coverage.
+    <p>Dashed markers and breaks show source joins. Bands show reported uncertainty.
       A jump at a join may reflect different methods.</p>
     <details>
     <summary>Global temperature</summary>
@@ -42,12 +41,12 @@
       with PAGES2k. These are constant offsets; no variability is stretched or
       compressed to make sources agree. EPICA's Antarctic temperatures are
       excluded from the global curve.</p>
-    <p>Hover to see the temperature source, sample date and available uncertainty.
-      PAGES2k shows a 95% ensemble range; Osman shows one standard deviation.
-      These describe different uncertainty measures and exclude additional
-      uncertainty in joining the sources. Hansen's uncertainty is not quantified
-      in this view. Ancient records cannot resolve the monthly changes visible
-      in modern observations.</p>
+    <p>Shading shows PAGES2k's 95% ensemble range and Osman's ±1σ ensemble spread
+      (one standard deviation). Hover for the bounds. These are different
+      uncertainty measures. They do not display uncertainty in the dates or add
+      uncertainty for baseline alignment and other differences between sources. GISS and Hansen
+      have no uncertainty band in this view; that does not mean their values
+      are exact. Ancient records cannot resolve modern monthly changes.</p>
     <p>The sources use different temperature definitions and methods. For example,
       GISS blends land air temperatures and sea surface temperatures; Osman
       reconstructs near-surface air temperature. This is a view of broad climate
@@ -55,13 +54,25 @@
     </details>
     <details>
     <summary>Sea level</summary>
-    <p>The sea-level curve spans geological estimates, a global
-      tide-gauge reconstruction and satellite measurements. Modern values
-      are relative to the 1950 mean; satellite data are aligned using matching
-      months in their overlap with tide gauges. The geological zero-age point
-      provides only an approximate reference. The shaded gap from about 640
-      to 1807 CE has no connecting line. Ancient estimates are much coarser
-      and less certain. Local coastal samples are excluded.</p>
+    <p>The curve combines Miller's geological estimates,
+      <a href="https://doi.org/10.1073/pnas.1411762111">Lambeck's postglacial reconstruction</a>
+      from about 34,800 to 3,000 years ago,
+      <a href="https://doi.org/10.1073/pnas.1517056113">Kopp's global reconstruction</a>
+      from about 3,000 years ago to 1800 CE, Jevrejeva's tide-gauge reconstruction
+      from 1807, and Colorado's satellite observations. Dashed markers and
+      line breaks identify source changes; their endpoints are not forced to meet.</p>
+    <p>Modern values are relative to the 1950 mean. Satellites are aligned using
+      matching months with tide gauges; Kopp's 1950 estimate and Miller's zero-age
+      estimate provide separate reference shifts. Lambeck retains its published
+      zero-age reference. Kopp's shading shows ±1σ uncertainty; Lambeck's shows
+      the published ±2σ accuracy range. These ranges exclude alignment uncertainty
+      and do not capture every model difference. The reconstruction grids do not
+      resolve daily or annual changes.</p>
+    <p>Lambeck estimates sea level from changes in ice volume; it excludes ocean
+      thermal expansion and is not identical to modern total sea level.
+      <a href="data/sealevel/lambeck2014-supplement.pdf#page=29">Table S3</a>
+      supplies its original values. Older geological samples remain coarse and
+      use an approximate reference. Local coastal samples are excluded.</p>
     </details>
     <details>
     <summary>Atmospheric CO₂</summary>
@@ -69,6 +80,10 @@
       ice-core composite. Lines connect available samples within each source,
       including days with no observation in between; no missing measurements
       are added. The source joins remain marked and disconnected.</p>
+    <p>Ice-core shading shows the published ±1σ measurement uncertainty
+      (one standard deviation). It does not include uncertainty in the gas ages
+      or all changes blurred by the ice-core record. Modern station observations
+      have no uncertainty band in this view.</p>
     <p>For deep time, the
       <a href="https://doi.org/10.1126/science.adi5177">CenCO₂PIP reconstruction</a>
       combines multiple proxy methods into one broad trend. We use the authors'
@@ -146,6 +161,10 @@
       a connecting line meets the left edge. Orbit keeps a fixed vertical scale.
       Similar shapes do not mean equal physical changes. Year markers mean January 1;
       close views show calendar dates. Samples retain their original averaging periods.</p>
+    <p>BP in the cursor box means years before 1950. Short source names and
+      uncertainty labels keep the readout compact; the sections above explain
+      each record. Band definitions differ between sources and are not all
+      95% intervals.</p>
     <p>GitHub checks current temperature, CO₂, solar and satellite sea-level observations
       on the 1st and 16th of each month. Reload the page to load the latest published
       snapshot. Historical reconstructions stay on their reviewed versions.</p>

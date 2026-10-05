@@ -11,7 +11,7 @@ Notes
 - The bottom panel combines global temperature estimates using constant reference offsets only. Source changes are marked and disconnected. See the temperature combination method below.
 - All identifiable component changes in the top composites have dashed markers and disconnected lines. Published provider composites retain their values; the markers explain their provenance.
 - Sea level uses one view with explicitly separated geological, tide-gauge and satellite segments. Local relative sea-level samples are not treated as a global reconstruction.
-- Tooltips always show sample sources. The browser loads bundled snapshots; observation downloads and validation run in the GitHub updater, rather than through browser refresh shortcuts or proxy services.
+- Tooltips always show short sample source names, dates and available uncertainty bounds; BP is abbreviated and still means years before 1950. Averaging periods, solar partial-year coverage and provisional labels remain visible. Full source explanations are in the info dialog and these notes. The browser loads bundled snapshots; observation downloads and validation run in the GitHub updater, rather than through browser refresh shortcuts or proxy services.
 - Autoscaling includes visible samples, drawn uncertainty bounds and a continuous line or band's intersection with the viewport's left edge. It does not use the whole off-screen endpoint or interpolate across source joins, point-only samples or declared data gaps. This affects the display range, not the stored observations.
 
 ## Orbital
@@ -39,7 +39,7 @@ Notes
   - Publication: https://doi.org/10.1038/s41586-021-03984-4
   - Downloaded: 2026-10-01
   - Source SHA-256: `3c62f06b89a2f613d914bce77200358305e13279236fd6d1db48671bea3a4bb1`
-  - Variables: `age` (bin midpoint, years before 1950), `gmst` (global mean annual air temperature in °C), `gmst_std` (500-member ensemble standard deviation in °C)
+  - Variables: `age` (bin midpoint, years before 1950), `gmst` (global mean annual air temperature in °C), `gmst_std` (500-member ensemble standard deviation in °C). Shading shows mean ±this published standard deviation (±1σ), with the same constant baseline offset applied to both bounds; it is not labelled a 95% interval or doubled to ±2σ.
   - `data/temperature/osman2021-gmst.csv` is the compact browser derivative; regenerate with `python scripts/build_osman_gmst.py` (requires `h5py`). No calibration, smoothing or interpolation occurs in that extraction.
 
 - `data/temperature/edc3deuttemp2007-noaa.txt` (EDC)
@@ -50,7 +50,7 @@ Notes
 - `data/temperature/Full_ensemble_median_and_95pct_range.txt` (Neukom PAGES2k)
   - Coverage: Common Era to present
   - Source: https://www.ncei.noaa.gov/pub/data/paleo/pages2k/neukom2019temp/recons/Full_ensemble_median_and_95pct_range.txt
-  - Runtime use: annual median and 2.5th/97.5th percentiles for 1–1879 CE. Published April–March anomalies relative to 1961–1990 are unchanged.
+  - Runtime use: annual median and 2.5th/97.5th percentiles for 1–1879 CE. Shading shows these published percentiles as the 95% ensemble range, without treating them as symmetric ±2σ bounds. Published April–March anomalies relative to 1961–1990 are unchanged.
 
 - `data/temperature/GLB.Ts+dSST.txt` (NASA GISS)
   - Coverage: 1880 CE to present
@@ -63,7 +63,7 @@ The composite uses GISS from 1880 onward, PAGES2k for 1–1879 CE, Osman at bin 
 
 Osman is aligned to PAGES2k over 150–1750 CE: its eight bin midpoints from 1700 to 300 BP each represent a complete 200-year interval. For each bin, average the 200 annual PAGES2k values over that same interval, then subtract the Osman value. Average those eight differences and add that one constant to every Osman mean and uncertainty bound. The current snapshots give an offset of −13.7040599625 °C. This estimates a compatible anomaly reference; it does not validate either reconstruction or remove disagreements at the joins. Hansen uses its published 14 °C reference independently and is not fitted to Osman.
 
-No standard-deviation matching, amplitude scaling, cross-fading or added smoothing is used for the temperature composite. The hover ranges retain PAGES2k's 95% ensemble interval and Osman's ±1σ ensemble spread. These are different measures; neither includes the added uncertainty of the cross-source alignment. Hansen uncertainty is not quantified in the source table or this interface.
+No standard-deviation matching, amplitude scaling, cross-fading or added smoothing is used for the temperature composite. Shading and hover ranges retain PAGES2k's 95% ensemble interval and Osman's ±1σ ensemble spread. These are different measures; neither includes the added uncertainty of the cross-source alignment. The bands describe value bounds at the published dates, without displaying horizontal dating uncertainty. GISS and Hansen uncertainty is not quantified in the loaded files or this interface.
 
 The component products use different definitions (including blended air/sea surface temperature versus near-surface air temperature), calibration assumptions, temporal resolution and dating methods. They are global estimates, but the composite is not a homogeneous climate data product. Use it for broad educational context. Do not infer precise warming rates or causal lags across joins, or interpret a coarse ancient point as equivalent to a modern monthly observation. Other Holocene reconstructions can disagree with Osman's trend. Its assimilation also uses model priors with greenhouse-gas forcing, so the temperature–CO₂ comparison is not fully independent.
 
@@ -83,7 +83,7 @@ The component products use different definitions (including blended air/sea surf
 - `data/co2/antarctica2015co2composite-noaa.txt`
   - Coverage: ice-core composite, ~800 kyr BP to modern bridge
   - Source: https://www.ncei.noaa.gov/pub/data/paleo/icecore/antarctica/antarctica2015co2composite-noaa.txt
-  - Runtime use: published gas ages and corrected CO₂ concentrations, with the provided one-standard-deviation measurement uncertainty. This is already the Bereiter et al. (2015) Antarctic composite, rather than raw data requiring another ice-core merge.
+  - Runtime use: published gas ages and corrected CO₂ concentrations, with shading at concentration ±the provided one-standard-deviation measurement uncertainty (±1σ). These bounds exclude gas-age uncertainty and do not describe all short-term variability blurred by the record. The provider uses the average uncertainty for a system/record where individual measurement deviations were unavailable. No concentration offset or new uncertainty estimate is added. This is already the Bereiter et al. (2015) Antarctic composite, rather than raw data requiring another ice-core merge.
 
 - `data/co2/rae2021co2-d11b-ph.txt`
   - Coverage: deep-time paleo CO2 (multi-Myr)
@@ -195,6 +195,25 @@ Alternatives reviewed: the final CMIP7 historical solar forcing v4.6 covers 1850
   - Coverage: Common Era coastal relative sea-level samples; retained for reference but not plotted as a global series
   - Source: https://www.ncei.noaa.gov/pub/data/paleo/reconstructions/ocean/kopp2016/kopp2016-global.txt
 
+- `data/sealevel/lambeck2014-supplement.pdf`, `lambeck2014-table-s3.txt` and `lambeck2014-esl.csv`
+  - Publication: Lambeck et al. (2014), *Sea level and global ice volumes from the Last Glacial Maximum to the Holocene*, https://doi.org/10.1073/pnas.1411762111
+  - Original supplement: https://www.pnas.org/doi/suppl/10.1073/pnas.1411762111/suppl_file/pnas.1411762111.sapp.pdf
+  - The original PDF was supplied by the user on 2026-10-05 after automated downloads failed. PDF SHA-256: `3ea96cf244e1221ca11c45b3ff450f14fc14b2267f4a8de46baf96e0a013cd27`. No source PDF contents were modified.
+  - Table S3 on PDF pages 29–36 has 326 rows. Columns are time in ka BP, nominal ice-volume-equivalent sea level in metres, best ESL estimate in metres, and its published accuracy estimate. **The caption explicitly defines column 4 as 2 sigma** despite the shorter “sigma esl” column heading. The plotted band is best estimate ±column 4, without doubling it again or labelling it ±1σ. Column 2 is the starting ice model and is not plotted.
+  - Coverage: 0–34.783 ka BP. All rows and their tabulated precision are preserved. The browser converts ages to `time = -age_ka_bp * 1000` under the shared BP (1950) convention and uses the preferred high-viscosity solution's published ESL estimates without fitting or resampling. The zero-age row is exactly 0 m with 0 stated error: it defines a model reference, not a zero-uncertainty modern measurement, and is excluded from the displayed segment.
+  - Extraction: pypdf 6.19.0 generated the bundled table text; PyMuPDF 1.28.2 independently reproduced every numeric cell, and the caption and representative pages were checked visually. Text SHA-256 (CRLF normalized to LF): `f4a2a25e1a03cb55f52b1869f0af2dee5d81d298047d19cb904bd1c6cddffc26`.
+  - Rebuild: `python scripts/build_lambeck_sealevel.py` verifies the PDF and text checksums, validates all rows, and reproduces the CSV with only the standard library. With build-time `pypdf==6.19.0` installed, `python scripts/build_lambeck_sealevel.py --verify-pdf` re-extracts and compares the full table before writing. CI checks every CSV cell against the verified table text without extra dependencies. This source is not a digitized graph or a merge of local relative sea-level observations.
+
+- `data/sealevel/kopp2016-global-posterior.mat` and `kopp2016-global-posterior.csv`
+  - Publication: Kopp et al. (2016), *Temperature-driven global sea-level variability in the Common Era*, https://doi.org/10.1073/pnas.1517056113
+  - Author archive: https://github.com/bobkopp/SESL
+  - Pinned original: https://raw.githubusercontent.com/bobkopp/SESL/2480e56bdb15b49aaf0e3ca42b310e0c6160e62c/Data/GLMW-1ts.mat
+  - Downloaded and verified: 2026-10-05. Original SHA-256: `dcbc6219ab2c310029cff314f3c9805ac24f76d58987d125c741fab7693050e5`.
+  - Original variable `sl` has 162 rows: published CE year, global posterior mean in mm, and posterior standard deviation in mm. The authors' `LoadData_SESL.m` confirms the units and interpretation. The covariance matrix `C` is in mm²; its diagonal reproduces those deviations to the published 0.01 mm rounding. This is the statistical reconstruction used as an input to the semi-empirical model, not its temperature-driven forward simulation output.
+  - Coverage: −1000 to 2010 on the published CE axis. The runtime retains −1000 through 1800, before the tide-gauge record begins. Earlier years retain the archive's numeric year coordinate without imposing an unverified BCE/year-zero conversion; tooltips use years BP (1950). The mostly 20-year evaluation grid samples a continuous reconstruction, not independent observations or fixed-duration means.
+  - Rebuild: `python scripts/build_kopp_sealevel.py`, using only the Python standard library and the bundled source. The checksum is required, and no date conversion, reference fitting, interpolation or smoothing occurs during extraction. All 162 original triples remain in the CSV; source selection and mm-to-m conversion occur in the browser.
+  - Author citation and distribution notice: `data/sealevel/kopp2016-source-readme.md`, copied from the pinned author archive (GPL-3.0-or-later notice for its software). The browser and extractor implementations are original to this project.
+
 - `data/sealevel/gslGPChange2014.txt`
   - Coverage: monthly global reconstruction, 1807–2010 CE
   - Runtime use: GSL in millimetres (column 4) and the published reconstruction error (column 5), converted to metres. All twelve months of 1950 define the tide-gauge zero reference. The provider describes a reconstruction from 1,277 tide gauges with corrections for glacial isostatic adjustment; it is not a simple mean of local relative levels.
@@ -213,13 +232,17 @@ Alternatives reviewed: the final CMIP7 historical solar forcing v4.6 covers 1850
 
 ### Sea-level combination method and limitations
 
-The **Global sea level** view combines geological, tide-gauge and satellite records. The modern reference is the Jevrejeva 1950 annual mean. Colorado is aligned to that curve by averaging satellite measurements into calendar months, comparing only matching months within the actual 1992–2010 overlap, and averaging the monthly differences equally. With the bundled snapshots, subtract 0.06986125 m from Jevrejeva and add 0.07363510 m to Colorado. Variability, ages and uncertainty widths are preserved. Colorado supplies the satellite-era segment; Jevrejeva supplies earlier monthly samples.
+The **Global sea level** view combines geological, postglacial, Common Era, tide-gauge and satellite records. The modern reference is the Jevrejeva 1950 annual mean. Colorado is aligned to that curve by averaging satellite measurements into calendar months, comparing only matching months within the actual 1992–2010 overlap, and averaging the monthly differences equally. With the bundled snapshots, subtract 0.06986125 m from Jevrejeva and add 0.07363510 m to Colorado. Variability, ages and uncertainty widths are preserved. Colorado supplies the satellite-era segment; Jevrejeva supplies earlier monthly samples from 1807.5417 on its decimal-year axis.
 
-Miller is rebased separately by subtracting its published zero-age GMGSL value of −0.83 m, setting that point to zero. This is only an approximate compatible geological reference under the archive's BP convention, not an observed 1950 calibration. Geological samples are retained only before the earliest tide-gauge sample. Consequently the newest retained geological point is about 640.2 CE and the first tide-gauge sample is 1807.5417 CE. That interval is shaded and labelled as a gap, with no interpolation. All source joins are disconnected.
+Kopp's posterior is rebased by subtracting its exact 1950 evaluation value, −0.0659 m. This makes a constant +0.0659 m shift, without fitting its amplitude or endpoints to tide gauges. It uses an estimated point reference rather than Jevrejeva's observed annual mean, so their datums are approximate counterparts. The latest retained Kopp node is 1800, leaving only about 7.54 years to the first tide-gauge sample. Kopp fills the old 640–1807 Common Era gap. Its shaded band and tooltips show the original marginal ±1σ posterior spread, shifted by the same constant. They are not covariance-propagated uncertainties of differences from an uncertain 1950 value; they exclude reference-alignment uncertainty.
 
-The three sources differ in temporal resolution, datum definitions, land-motion/basin corrections, sampling and uncertainty. An offset cannot remove those differences. Miller's derived thermosteric and ice-volume estimates also depend on temperature-related inputs, so this is not an independent test of temperature–sea-level correlation. Geological uncertainty is not tabulated point by point here; its metre-scale estimates are not comparable to modern millimetre precision. Duplicate published ages/values are retained without inventing an average.
+Lambeck supplies 285 estimates older than Kopp's oldest node, from 2,970 to 34,783 years BP (1950). Its published zero-age estimate is already 0 m, so its values receive no vertical offset. This is an approximate compatible model reference, not an observed 1950 calibration. At 2,970 years BP, Lambeck is −0.54 m with a ±0.07 m published 2σ accuracy; Kopp's neighboring point at 2,950 years BP is −0.07989 m after its documented reference shift. The approximately 0.46 m difference is retained. The old 623-year break between Miller and Kopp is replaced by a 20-year interval between Lambeck and Kopp. The late Holocene spacing is mostly 69–70 years, with generally wider spacing earlier. These are tabulated reconstruction estimates, not independent observations or annual means.
 
-The Kopp archive contains local coastal samples, not the published global posterior curve. It remains excluded. Filling the gap would require obtaining a published global Common Era reconstruction and validating its reference and temporal resolution; merging the local points would give a misleading result.
+Miller is rebased separately by subtracting its published zero-age GMGSL value of −0.83 m, setting that point to zero. Its reference is likewise approximate. Its geological samples are now retained only before Lambeck's oldest estimate, 34,783 years BP. Every source join has a dashed marker and a disconnected line and band. No extra samples, interpolation across sources or forced endpoint matching are added.
+
+The five sources differ in temporal resolution, datum definitions, land-motion/basin corrections, sampling and uncertainty. An offset cannot remove those differences. **Lambeck is ice-volume-equivalent sea level**, inferred from far-field evidence corrected for isostatic and tectonic effects; it excludes thermal expansion and is not the same quantity as Miller's total geocentric estimate or modern global mean sea level. Its reported 2σ accuracy is not a full uncertainty budget for model selection, earth rheology, missing contributions or alignment. These limitations can produce disagreement at joins and limit temperature correlations. Kopp's reconstruction constrains the mean sea level of −100 to 100 and 1600 to 1800 on its CE axis to be equal; this constrains its long-term trend. The modern part of that reconstruction also uses instrumental information, so its agreement with tide gauges is not an independent validation. Miller's uncertainty is not tabulated point by point here; its metre-scale estimates are not comparable to modern millimetre precision. Miller's derived thermosteric and ice-volume estimates depend on temperature-related inputs, so this is not an independent test of temperature–sea-level correlation. Duplicate published ages/values are retained without inventing an average.
+
+The older NOAA `kopp2016-global.txt` archive contains local coastal samples and remains excluded. It is distinct from the author global posterior; local relative sea levels are not treated as global observations. The Kopp, Lambeck and Miller historical snapshots are excluded from the automatic updater, which checks current observations only.
 
 ## Population
 

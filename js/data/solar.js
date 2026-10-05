@@ -75,7 +75,7 @@ function annualSolarRows(rows) {
     annual.push({ time: (bin.first + bin.last) / 2, irradiance: bin.sum / bin.count,
       source: bin.source, cadence: 'annual', maxGapYears: 1.5, provisional: bin.provisional,
       sampleDate: bin.year + ' CE • ' + (partial ? 'partial-year mean' : 'annual mean'),
-      note: bin.count + ' daily values, ' + first + ' to ' + last + (bin.provisional ? '; includes provisional readings' : '') });
+      note: bin.count + ' days • ' + first + '–' + last + (bin.provisional ? ' • provisional' : '') });
   }
   return sortRowsByTimeDesc(annual);
 }
@@ -187,8 +187,8 @@ function smoothDenseSolarRows(rows, denseStartTime, windowDays) {
   const smoothedRows = rows.map(row => ({ ...row }));
   for (let i = 0; i < denseCount; i++) {
     smoothedRows[denseCount - 1 - i].irradiance = smoothedAscending[i];
-    smoothedRows[denseCount - 1 - i].note = windowDays + '-day mean within this source' +
-      (smoothedRows[denseCount - 1 - i].provisional ? '; provisional observation' : '');
+    smoothedRows[denseCount - 1 - i].note = windowDays + '-day mean' +
+      (smoothedRows[denseCount - 1 - i].provisional ? ' • provisional' : '');
   }
 
   return smoothedRows;

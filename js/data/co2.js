@@ -43,7 +43,7 @@ function parseAntarcticaCompositeCo2Rows(rawLines) {
 
     rows.push({
       time: -ageGasCalBp,
-      co2: co2Ppm, source: 'co2-ice',
+      co2: co2Ppm, source: 'co2-ice', band: true,
       lower: co2Ppm - parseFloat(tokens[2]), upper: co2Ppm + parseFloat(tokens[2]),
       uncertainty: '±1σ measurement uncertainty'
     });

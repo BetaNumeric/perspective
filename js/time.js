@@ -10,7 +10,7 @@ function sampleTimeLabel(row) {
     const iso = new Date(millisecondsFromDecimalYear(calendarYear)).toISOString();
     return iso.slice(0, cadence === 'month' ? 7 : 10);
   }
-  return row.time <= 0 ? nfc(-row.time, row.time < -10000 ? 0 : 2) + ' years BP (1950)' : nfc(calendarYear, 2) + ' CE';
+  return row.time <= 0 ? nfc(-row.time, row.time < -10000 ? 0 : 2).replace(/\.00$/, '') + ' BP' : nfc(calendarYear, 2) + ' CE';
 }
 
 function utcDateMilliseconds(calendarYear, monthIndex = 0, dayOfMonth = 1) {

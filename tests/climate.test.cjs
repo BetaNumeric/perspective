@@ -124,6 +124,70 @@ test('Osman alignment compares the same complete 200-year periods with PAGES2k',
   assert.ok(Math.abs(result.difference) < 1e-12);
 });
 
+test('temperature and ice-core bands keep the published uncertainty definitions and widths', () => {
+  const result = run(`(() => {
+    const temperature = data[0];
+    const ice = data[1].seriesRows.filter(row => row.source === 'co2-ice');
+    const originalIce = new Map(parseAntarcticaCompositeCo2Rows(sourceTables.co2AntarcticaRaw)
+      .map(row => [row.time, row]));
+    return { sources: [...new Set(temperature.seriesRows.filter(row => row.band).map(row => row.source))],
+      temperatureBand: temperature.hasUncertaintyBands,
+      valid: temperature.seriesRows.filter(row => row.band).every(row =>
+        row.lower <= row.temperature && row.temperature <= row.upper &&
+        row.uncertainty === (row.source === 'pages' ? '95% ensemble range' : '±1σ ensemble spread')),
+      iceCount: ice.length,
+      icePreserved: ice.every(row => row.band && row.uncertainty === '±1σ measurement uncertainty' &&
+        row.co2 === originalIce.get(row.time).co2 && row.lower === originalIce.get(row.time).lower &&
+        row.upper === originalIce.get(row.time).upper) };
+  })()`);
+  assert.deepEqual([...result.sources], ['pages', 'osman']);
+  assert.equal(result.temperatureBand, true);
+  assert.equal(result.valid, true);
+  assert.ok(result.iceCount > 1000);
+  assert.equal(result.icePreserved, true);
+});
+
+test('published temperature and ice-core bands render separately and fit the visible scale', () => {
+  const saved = {beginShape:context.beginShape, vertex:context.vertex, endShape:context.endShape,
+    clip:context.drawingContext.clip, restore:context.drawingContext.restore};
+  let vertices, clipped = false;
+  const polygons = [];
+  context.drawingContext.clip = () => { clipped = true; };
+  context.drawingContext.restore = () => { clipped = false; };
+  context.beginShape = () => { vertices = []; };
+  context.vertex = (x,y) => vertices.push([x,y]);
+  context.endShape = () => polygons.push({vertices,clipped});
+  try {
+    for (const [dataset, years, expectedSources] of [[0,30000,['pages','osman']], [1,900000,['co2-ice']]]) {
+      polygons.length = 0;
+      const state = run(`(() => {
+        setZoom(${years} * 1000 / (width - shift)); oneYear = -1000 / scrollValue;
+        const series = data[${dataset}];
+        series.rectY = panelTargetY(series.position); series.draw();
+        const count = series.visiblePointCount();
+        return {sources: [...new Set(series.seriesRows.slice(0,count).filter(row => row.band).map(row => row.source))],
+          samples: series.seriesRows.slice(0,count).filter(row => row.band).map(row => ({
+            x:width - oneYear * (row.time - series.BP), lower:row.lower, upper:row.upper})),
+          minimum:series.localMinY, maximum:series.localMaxY,
+          top:series.rectY, bottom:series.rectY+series.rectH};
+      })()`);
+      assert.deepEqual([...state.sources], expectedSources);
+      assert.equal(polygons.length, expectedSources.length);
+      for (const polygon of polygons) {
+        assert.equal(polygon.clipped, true);
+        assert.ok(polygon.vertices.every(([,y]) => y >= state.top-1e-9 && y <= state.bottom+1e-9));
+        for (const [x] of polygon.vertices) {
+          assert.ok(state.samples.some(sample => Math.abs(sample.x-x)<1e-9), 'band vertices retain published sample dates');
+        }
+      }
+      assert.ok(state.samples.every(sample => sample.lower >= state.minimum-1e-12 && sample.upper <= state.maximum+1e-12));
+    }
+  } finally {
+    Object.assign(context, {beginShape:saved.beginShape,vertex:saved.vertex,endShape:saved.endShape});
+    Object.assign(context.drawingContext, {clip:saved.clip,restore:saved.restore});
+  }
+});
+
 test('rendering preserves both sides of every source join and leaves it disconnected', () => {
   const result = run(`(() => {
     setZoom(70000000); oneYear = -1000 / scrollValue;
@@ -146,7 +210,7 @@ test('one global sea-level view includes geological and modern records without l
   const result = run(`({ sources: [...new Set(data[5].seriesRows.map(row => row.source))],
     oldest: data[5].minX, maximum: data[5].maxY,
     seaViews: data.filter(series => series.columnY === 'Sealevel').length })`);
-  assert.deepEqual([...result.sources], ['sea-satellite', 'sea-gauges', 'sea-miller']);
+  assert.deepEqual([...result.sources], ['sea-satellite', 'sea-gauges', 'sea-kopp', 'sea-lambeck', 'sea-miller']);
   assert.ok(result.oldest < -60000000);
   assert.ok(result.maximum > 100);
   assert.equal(result.seaViews, 1);
@@ -157,9 +221,13 @@ test('sea-level alignment preserves variability and uncertainty while using a 19
     const gp = parseGp2014SeaLevelRows(sourceTables.sealevelGpRaw);
     const satellite = parseColoradoSeaLevelRows(sourceTables.sealevelRaw);
     const miller = parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw);
-    const originals = { 'sea-gauges': gp, 'sea-satellite': satellite, 'sea-miller': miller };
+    const kopp = parseKopp2016SeaLevelRows(sourceTables.sealevelKoppRaw);
+    const lambeck = parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw);
+    const originals = { 'sea-gauges': gp, 'sea-satellite': satellite, 'sea-miller': miller,
+      'sea-kopp': kopp, 'sea-lambeck': lambeck };
     const offsets = { 'sea-gauges': -seaLevelCalibration.gpReference,
-      'sea-satellite': seaLevelCalibration.satelliteOffset, 'sea-miller': -seaLevelCalibration.millerReference };
+      'sea-satellite': seaLevelCalibration.satelliteOffset, 'sea-miller': -seaLevelCalibration.millerReference,
+      'sea-kopp': -seaLevelCalibration.koppReference, 'sea-lambeck': -seaLevelCalibration.lambeckReference };
     const lookup = Object.fromEntries(Object.entries(originals).map(([id,rows])=> {
       const byTime = new Map();
       for (const row of rows) byTime.set(row.time, [...(byTime.get(row.time)||[]), row]);
@@ -176,6 +244,103 @@ test('sea-level alignment preserves variability and uncertainty while using a 19
   assert.equal(result.preserved, true);
   assert.equal(result.months, 12);
   assert.ok(Math.abs(result.referenceMean) < 1e-12);
+});
+
+test('Kopp fills the Common Era with the global posterior on its original evaluation grid', () => {
+  const published = fs.readFileSync('data/sealevel/kopp2016-global-posterior.csv', 'utf8')
+    .trim().split(/\r?\n/).slice(1).map(line => line.split(',').map(Number));
+  const raw = run('parseKopp2016SeaLevelRows(sourceTables.sealevelKoppRaw)');
+  assert.equal(raw.length, 162);
+  for (const [year, mean, deviation] of published) {
+    const row = raw.find(row => row.time === year - 1950);
+    assert.equal(row.sealevel, mean / 1000);
+    assert.equal(row.lower, (mean - deviation) / 1000);
+    assert.equal(row.upper, (mean + deviation) / 1000);
+    assert.equal(row.band, true);
+    assert.equal(row.uncertainty, '±1σ global posterior');
+  }
+  assert.ok(Math.abs(run('seaLevelCalibration.koppReference') + 0.0659) < 1e-12);
+  const reference = raw.find(row => row.time === 0);
+  assert.equal(reference.sealevel - run('seaLevelCalibration.koppReference'), 0);
+  const retained = run('data[5].seriesRows.filter(row => row.source === "sea-kopp")');
+  assert.equal(retained.length, 141);
+  assert.equal(retained[0].time, 1800 - 1950);
+  assert.equal(retained.at(-1).time, -1000 - 1950);
+  assert.equal(run('data[5].hasUncertaintyBands'), true);
+  assert.equal(run('data[5].seriesRows.some(row => row.source === "sea-miller" && row.time >= -2950)'), false);
+  assert.equal(run('data[5].seriesRows.some(row => row.source === "sea-kopp" && row.time >= 1807.5417 - 1950)'), false);
+});
+
+test('invalid Kopp rows and absent reference points fail visibly', () => {
+  for (const row of ['1950,nan,4.67', '1950,-65.9,-4.67', '1950,-65.9', '1950,,4.67']) {
+    assert.throws(() => run(`parseKopp2016SeaLevelRows([${JSON.stringify(row)}])`), /Invalid Kopp/);
+  }
+  assert.throws(() => run(`buildCombinedSeaLevelTable(
+    parseColoradoSeaLevelRows(sourceTables.sealevelRaw),
+    parseGp2014SeaLevelRows(sourceTables.sealevelGpRaw),
+    parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw),
+    parseKopp2016SeaLevelRows(sourceTables.sealevelKoppRaw).filter(row => row.time !== 0),
+    parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw))`), /1950 reference/);
+});
+
+test('Lambeck uses Table S3 best estimates and its published 2 sigma half-widths', () => {
+  const published = fs.readFileSync('data/sealevel/lambeck2014-esl.csv', 'utf8')
+    .trim().split(/\r?\n/).slice(1).map(line => line.split(',').map(Number));
+  const raw = run('parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw)');
+  assert.equal(raw.length, 326);
+  for (const [age, _nominal, best, twoSigma] of published) {
+    const row = raw.find(row => row.time === -age * 1000);
+    assert.equal(row.sealevel, best);
+    assert.equal(row.lower, best - twoSigma);
+    assert.equal(row.upper, best + twoSigma);
+    assert.equal(row.band, true);
+    assert.equal(row.uncertainty, '±2σ published accuracy');
+  }
+  const holocene = raw.find(row => row.time === -6026);
+  assert.equal(holocene.sealevel, -2.96);
+  assert.ok(Math.abs(holocene.lower + 3.03) < 1e-12);
+  assert.ok(Math.abs(holocene.upper + 2.89) < 1e-12);
+  assert.equal(Math.min(...raw.map(row => row.sealevel)), -134.28);
+  assert.equal(run('seaLevelCalibration.lambeckReference'), 0);
+  const retained = run('data[5].seriesRows.filter(row => row.source === "sea-lambeck")');
+  assert.equal(retained.length, 285);
+  assert.ok(Math.abs(retained[0].time + 2970) < 1e-8);
+  assert.equal(retained.at(-1).time, -34783);
+  assert.ok(retained.every(row => row.time < -2950));
+  assert.equal(run('data[5].seriesRows.some(row => row.source === "sea-miller" && row.time >= -34783)'), false);
+});
+
+test('Lambeck joins keep both definitions visible without fitting endpoints or inventing samples', () => {
+  const boundaries = run(`(() => {
+    const rows = data[5].seriesRows;
+    return rows.flatMap((row,i) => i && sourceSegment(row) !== sourceSegment(rows[i-1]) ?
+      [{older:row.source, newer:rows[i-1].source, age:-row.time, newerAge:-rows[i-1].time,
+        jump:rows[i-1].sealevel-row.sealevel, connected:data[5].canConnectIndices(i-1,i)}] : []);
+  })()`);
+  const recent = boundaries.find(join => join.older === 'sea-lambeck');
+  assert.equal(recent.newer, 'sea-kopp');
+  assert.equal(recent.newerAge, 2950);
+  assert.ok(Math.abs(recent.age - 2970) < 1e-8);
+  assert.ok(Math.abs(recent.jump - 0.46011) < 1e-10);
+  assert.equal(recent.connected, false);
+  const ancient = boundaries.find(join => join.older === 'sea-miller');
+  assert.equal(ancient.newer, 'sea-lambeck');
+  assert.equal(ancient.newerAge, 34783);
+  assert.ok(ancient.age > 34783);
+  assert.equal(ancient.connected, false);
+});
+
+test('invalid Lambeck rows and an absent zero-age reference fail visibly', () => {
+  for (const row of ['6.026,-3.23,nan,0.07', '6.026,-3.23,-2.96,-0.07',
+    '-6.026,-3.23,-2.96,0.07', '6.026,-3.23,-2.96', '6.026,-3.23,,0.07']) {
+    assert.throws(() => run(`parseLambeck2014SeaLevelRows([${JSON.stringify(row)}])`), /Invalid Lambeck/);
+  }
+  assert.throws(() => run(`buildCombinedSeaLevelTable(
+    parseColoradoSeaLevelRows(sourceTables.sealevelRaw),
+    parseGp2014SeaLevelRows(sourceTables.sealevelGpRaw),
+    parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw),
+    parseKopp2016SeaLevelRows(sourceTables.sealevelKoppRaw),
+    parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw).filter(row => row.time !== 0))`), /zero-age reference/);
 });
 
 test('calibration gives matching months equal weight despite different sample counts', () => {
@@ -198,14 +363,14 @@ test('all comparison source boundaries survive thinning and stay disconnected', 
       return {count:joins.length, valid:joins.every(join=>join.retained&&!join.connected)};
     });
   })()`);
-  assert.deepEqual([...result.map(item=>item.count)], [3,4,2,2,1]);
+  assert.deepEqual([...result.map(item=>item.count)], [3,4,2,4,1]);
   assert.ok(result.every(item=>item.valid));
   const gap = run(`(() => {
     const rows = data[5].seriesRows;
-    const i = rows.findIndex((row,index) => index && row.source === 'sea-miller' && rows[index-1].source === 'sea-gauges');
+    const i = rows.findIndex((row,index) => index && row.source === 'sea-kopp' && rows[index-1].source === 'sea-gauges');
     return {older:rows[i].time+1950, newer:rows[i-1].time+1950, connected:data[5].canConnectIndices(i-1,i)};
   })()`);
-  assert.ok(Math.abs(gap.older - 640.2) < 1e-8);
+  assert.equal(gap.older, 1800);
   assert.ok(Math.abs(gap.newer - 1807.5417) < 1e-8);
   assert.equal(gap.connected, false);
 });
@@ -423,7 +588,8 @@ test('annual solar means keep source fragments separate and date partial years b
   assert.deepEqual([...result.map(row=>row.source)], ['new','old','solar-satire-m']);
   assert.ok(Math.abs(result[1].time-run('(decimalYearFromYmd(2024,1,1)+decimalYearFromYmd(2024,1,10))/2-1950')) < 1e-10);
   assert.match(result[1].sampleDate, /partial-year mean/);
-  assert.match(result[1].note, /2 daily values, 2024-01-01 to 2024-01-10/);
+  assert.match(result[1].note, /2 days • 2024-01-01–2024-01-10/);
+  assert.match(result[0].note, /provisional/);
   assert.equal(result[0].provisional, true);
   assert.equal(result[2].time, 1600.5-1950);
 });
@@ -641,7 +807,8 @@ test('tooltips always identify single-source datasets and retired shortcuts do n
     run(`setZoom(100); oneYear=-10;
       const series=data[2]; mouseX=width-oneYear*(series.dataX[0]-series.BP)-shift;
       mouseY=200; series.draw();`);
-    assert.ok(labels.some(label=>label.includes('Source: Zeebe 2019 ZB18a')));
+    assert.ok(labels.some(label=>label.includes('ZB18a')));
+    assert.ok(!labels.some(label=>label.includes('Source:')));
     const before = run('({zoom:scrollValue,cursor:showCursor,comparison:selectedData})');
     context.fetch = () => { throw new Error('Retired shortcuts must not request data'); };
     run("for (const pressedKey of ['v','V','r','R','p','P']) { key=pressedKey; keyPressed(); }");
@@ -650,6 +817,71 @@ test('tooltips always identify single-source datasets and retired shortcuts do n
     context.text=originalText;
     delete context.fetch;
     run('mouseX=0;mouseY=0');
+  }
+});
+
+test('compact mobile tooltips retain dates, source, uncertainty and essential solar context', () => {
+  const saved = {text:context.text,rect:context.rect,width:context.width,height:context.height,
+    mouseX:context.mouseX,mouseY:context.mouseY,cursor:run('showCursor')};
+  const labels = [], boxes = [];
+  context.text = value => labels.push(String(value));
+  context.rect = (x,y,w,h) => boxes.push({x,y,w,h});
+  context.width = 375;
+  context.height = 844;
+  try {
+    for (const [dataset, source, period, uncertainty] of [
+      [0,'giss','',null], [0,'pages','Apr–Mar annual','95% ensemble'],
+      [0,'osman','200-year mean','±1σ ensemble'], [1,'co2-ice','','±1σ measurement'],
+      [1,'co2-cencopip','500,000-year mean','95% credible'],
+      [5,'sea-kopp','','±1σ posterior'], [5,'sea-lambeck','','±2σ accuracy'],
+      [6,'population-projection','',null]
+    ]) {
+      labels.length = 0; boxes.length = 0;
+      const expected = run(`(() => {
+        const series=data[${dataset}], index=series.seriesRows.findIndex(row=>row.source==='${source}');
+        const sample=series.seriesRows[index];
+        const years=Math.max(1,(series.BP-sample.time)*1.5);
+        setZoom(years*1000/(width-shift)); oneYear=-1000/scrollValue;
+        mouseX=width-oneYear*(sample.time-series.BP)-shift; mouseY=200; showCursor=true;
+        series.drawDataTooltip(300,-1,series.dataX.length);
+        return {value:series.formatTooltipValue(series.dataY[index]), date:sampleTimeLabel(sample),
+          source:SOURCE_INFO[sample.source].short,
+          lower:Number.isFinite(sample.lower)?series.formatTooltipValue(sample.lower):null,
+          upper:Number.isFinite(sample.upper)?series.formatTooltipValue(sample.upper):null};
+      })()`);
+      const rendered = labels.join(' ');
+      for (const value of [expected.value,expected.date,expected.source,period,uncertainty,expected.lower,expected.upper].filter(Boolean)) {
+        assert.ok(rendered.includes(value), `${source} retains ${value}`);
+      }
+      assert.ok(labels.length <= 5, `${source} readout stays compact`);
+      assert.equal(boxes.length,1);
+      assert.ok(boxes[0].x >= 8 && boxes[0].x+boxes[0].w <= 367);
+      assert.ok(!rendered.includes('Source:') && !rendered.includes('years BP (1950)'));
+    }
+    for (const annual of [false,true]) {
+      labels.length = 0;
+      run(`(() => {
+        const rows=sortRowsByTimeDesc([2,6,10].map(day=>({time:decimalYearFromYmd(2024,1,day)-1950,
+          irradiance:1361,source:'solar-tsis',provisional:true,
+          sampleDate:'2024-01-'+String(day).padStart(2,'0')})));
+        const displayed=${annual ? 'annualSolarRows(rows)' : 'smoothDenseSolarRows(rows,-100,50)'};
+        const series=new Data(buildTimeValueTable(displayed,'irradiance','Solar Irradiance'),
+          'time','Solar Irradiance','W/m²',1,0,true);
+        const index=series.seriesRows.findIndex(row=>row.source==='solar-tsis' && row.provisional);
+        const sample=series.seriesRows[index];
+        setZoom(1000); oneYear=-1; mouseX=width-oneYear*(sample.time-series.BP)-shift;
+        series.drawDataTooltip(300,-0.1,series.dataX.length);
+      })()`);
+      const rendered = labels.join(' ');
+      assert.match(rendered,/TSIS/);
+      assert.match(rendered,/provisional/);
+      assert.match(rendered,annual ? /partial-year mean/ : /50-day mean/);
+      if (annual) assert.match(rendered,/\d+ days • \d{4}-\d{2}-\d{2}–\d{4}-\d{2}-\d{2}/);
+    }
+  } finally {
+    Object.assign(context,{text:saved.text,rect:saved.rect,width:saved.width,height:saved.height,
+      mouseX:saved.mouseX,mouseY:saved.mouseY});
+    run(`showCursor=${saved.cursor}`);
   }
 });
 

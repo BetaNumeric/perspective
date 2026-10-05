@@ -42,6 +42,8 @@ function preload() {
 
   // Sea Level (oldest -> newest)
   sourceTables.sealevelMillerRaw = loadSourceLines('data/sealevel/miller2024-sealevel.txt');
+  sourceTables.sealevelLambeckRaw = loadSourceLines('data/sealevel/lambeck2014-esl.csv');
+  sourceTables.sealevelKoppRaw = loadSourceLines('data/sealevel/kopp2016-global-posterior.csv');
   sourceTables.sealevelGpRaw = loadSourceLines('data/sealevel/gslGPChange2014.txt');
   sourceTables.sealevelRaw = loadSourceLines('data/sealevel/gmsl_2026rel2_seasons_retained.txt');
 
@@ -108,7 +110,9 @@ function initializeView() {
   sourceTables.sealevel = buildCombinedSeaLevelTable(
     parseColoradoSeaLevelRows(sourceTables.sealevelRaw),
     parseGp2014SeaLevelRows(sourceTables.sealevelGpRaw),
-    parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw));
+    parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw),
+    parseKopp2016SeaLevelRows(sourceTables.sealevelKoppRaw),
+    parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw));
 
   createTimelineEvents();
 

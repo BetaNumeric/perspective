@@ -1,5 +1,5 @@
 function sourceLabelForDataPoint(sample) {
-  return sample?.source ? SOURCE_INFO[sample.source]?.label || sample.source : '';
+  return sample?.source ? SOURCE_INFO[sample.source]?.short || sample.source : '';
 }
 
 function wrapTooltipText(value, availableWidth) {
@@ -347,14 +347,6 @@ class Data {
       const transitionTime = (this.dataX[i - 1] + this.dataX[i]) / 2;
       const transitionX = width - oneYear * (transitionTime - this.BP);
       if (transitionX < shift || transitionX > width) continue;
-      const seaGap = newer.source === 'sea-gauges' && older.source === 'sea-miller';
-      if (seaGap) {
-        const gapLeft = max(shift, width - oneYear * (older.time - this.BP));
-        const gapRight = min(width, width - oneYear * (newer.time - this.BP));
-        noStroke();
-        fill(180, 20);
-        rect(gapLeft, this.rectY + 65, gapRight - gapLeft, max(0, this.rectH - 75));
-      }
       stroke(180, 110);
       for (let y = this.rectY + 45; y < this.rectY + this.rectH; y += 10) {
         line(transitionX, y, transitionX, min(y + 4, this.rectY + this.rectH));
@@ -363,7 +355,7 @@ class Data {
       fill(190);
       textAlign(RIGHT, BOTTOM);
       const label = (SOURCE_INFO[sourceSegment(older)]?.short || sourceSegment(older)) + ' / ' +
-        (SOURCE_INFO[sourceSegment(newer)]?.short || sourceSegment(newer)) + (seaGap ? ' • gap' : '');
+        (SOURCE_INFO[sourceSegment(newer)]?.short || sourceSegment(newer));
       labels.push({ label, x: transitionX });
     }
     labels.sort((a, b) => b.x - a.x);
@@ -413,20 +405,23 @@ class Data {
     const valueText = this.formatTooltipValue(this.dataY[index]);
     const mouseData = this.unit ? valueText + ' ' + this.unit : valueText;
     const sourceLabel = sourceLabelForDataPoint(this.seriesRows?.[index]);
-    const sourceLine = sourceLabel ? 'Source: ' + sourceLabel : '';
     const sample = this.seriesRows?.[index];
+    const sourceInfo = SOURCE_INFO[sample?.source];
     let sampleLine = '';
+    let uncertaintyLine = '';
     if (sample) {
       sampleLine = sampleTimeLabel(sample);
+      if (sourceInfo?.period) sampleLine += ' • ' + sourceInfo.period;
       if (sample.site) sampleLine += ' • site ' + sample.site;
-      if (sample.station) sampleLine += ' • station ' + sample.station;
+      if (sample.station) sampleLine += ' • ' + sample.station;
       if (Number.isFinite(sample.lower) && Number.isFinite(sample.upper)) {
-        sampleLine += ' • ' + this.formatTooltipValue(sample.lower) + ' to ' + this.formatTooltipValue(sample.upper) + ' ' + this.unit + ' (' + sample.uncertainty + ')';
-      } else if (sample.source === 'hansen') sampleLine += ' • uncertainty not quantified here';
-      if (sample.note) sampleLine += ' • ' + sample.note;
+        uncertaintyLine = this.formatTooltipValue(sample.lower) + ' to ' + this.formatTooltipValue(sample.upper) +
+          (this.unit ? ' ' + this.unit : '') + ' • ' + (sourceInfo?.uncertainty || sample.uncertainty || 'range');
+      }
     }
-    const lines = [mouseData, sourceLine, sampleLine].filter(Boolean)
-      .flatMap(value => wrapTooltipText(value, width - 32));
+    const lines = [mouseData + (sourceLabel ? ' • ' + sourceLabel : ''), sampleLine, uncertaintyLine,
+      sample?.source?.startsWith('solar-') ? sample.note : ''].filter(Boolean)
+      .flatMap(value => wrapTooltipText(value, min(320, width - 32)));
     const tooltipWidth = max(...lines.map(value => textWidth(value))) + 12;
     const lineHeight = max(16, height / TIMELINE_HEIGHT_DIVISOR_SMALL);
     const tooltipHeight = lines.length * lineHeight + 8;
