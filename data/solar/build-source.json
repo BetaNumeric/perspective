@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "product": "PMIP4 14C cycle yearly CMIP6-scaled solar irradiance, v20160613 fc",
+  "input_url": "https://www2.mps.mpg.de/projects/sun-climate/data/PMIP6/SSI_14C_cycle_yearly_cmip_v20160613_fc.txt.gz",
+  "cache_filename": "SSI_14C_cycle_yearly_cmip_v20160613_fc.txt.gz",
+  "input_bytes": 633841999,
+  "input_sha256": "61956041de06ecae484eb75e3ed40792a7e9901e898bbc3cee7d8eadb20456a8",
+  "output_path": "data/solar/SATIRE_M_TSI_14C_fc.csv",
+  "output_rows": 69235,
+  "output_sha256_lf": "65751933b4590d37b0129f4c31af84c0cb12d60225b9e9770689200d1683e4db",
+  "method": "For each original time step, sum SSI times wavelength-bin width in provider order; round CSV fields to six decimals and sort newest first. SHA-256 of the output normalizes CRLF to LF.",
+  "documentation_url": "https://www2.mps.mpg.de/projects/sun-climate/data/PMIP6/readme.txt",
+  "verified_on": "2026-10-05"
+}

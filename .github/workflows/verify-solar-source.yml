@@ -1,0 +1,28 @@
+name: Verify original solar reconstruction
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the reviewed data and build scripts
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Test the source verifier
+        run: python -m unittest discover -s tests -p 'test_*.py'
+
+      - name: Download and reproduce the pinned solar reconstruction
+        run: python scripts/verify_solar_source.py

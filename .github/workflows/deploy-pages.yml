@@ -6,7 +6,11 @@ on:
     paths:
       - 'index.html'
       - 'sketch.js'
+      - 'js/**'
+      - 'styles.css'
       - 'data/**'
+      - 'scripts/**'
+      - 'tests/**'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
   workflow_call:
@@ -40,10 +44,27 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
 
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Check the app and data-processing scripts
+        run: |
+          node tests/climate.test.cjs
+          python -m unittest discover -s tests -p 'test_*.py'
+
       - name: Prepare the static website
         run: |
           mkdir _site
-          cp index.html sketch.js _site/
+          cp index.html sketch.js styles.css _site/
+          cp -R js _site/js
           cp -R data _site/data
 
       - name: Upload the website

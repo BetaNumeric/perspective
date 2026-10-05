@@ -46,16 +46,31 @@ All identifiable source transitions have dashed markers and disconnected lines. 
 
 The Kopp file in `data/sealevel` contains measurements from individual coastal sites; it is retained for reference and excluded from the global curve. To fill sea level's Common Era gap, we would need a published **global reconstruction**, rather than merging those local samples. A geological reference shift does not make its sea-level definition, land-motion corrections or uncertainty identical to modern observations.
 
-The SATIRE runtime CSV is bundled; its large original SSI input is not. Its integration script can regenerate TSI after obtaining the cited input file. The regression checks cover the CSV and combination logic, but do not independently reproduce that missing source's spectral integration. Each page load rebuilds the solar combination from the bundled base and observations, so identical snapshots give identical results.
+The SATIRE runtime CSV is bundled. Its exact original SSI input is available through the checksum-verified rebuild command below. On 2026-10-05, integrating all 69,235 original spectral rows reproduced the bundled CSV exactly. Each page load rebuilds the solar combination from the bundled base and observations, so identical snapshots give identical results.
 
-Scroll to zoom. `+`/`D`, `-`/`A`, and the left/right arrow keys also zoom; digits `0`–`9` select time scales. Press `C` or Space to toggle the cursor and `P` for performance information. All dataset tooltips identify their source automatically. The former `V` source toggle and `R` browser-download shortcut have been removed. The app loads the published dataset snapshots; reload the page to pick up a newer deployment from the GitHub updater.
+Scroll to zoom. `+`/`D`, `-`/`A`, and the left/right arrow keys also zoom; digits `0`–`9` select time scales. Press `C` or Space to toggle the cursor. Tab focuses the dataset buttons; Enter or Space selects one. While a dataset button is focused, Left/Right selects the adjacent button and Home/End selects the first/last. The buttons announce their selected state to screen readers. All dataset tooltips identify their source automatically. Reload the page to pick up a newer deployment from the GitHub updater.
+
+Only finite samples at or before the timeline's right edge are drawn. Samples and their source metadata are sorted together before visibility searches. If a required file fails to load or a reference alignment fails, the app displays an error instead of an incomplete chart. Solar alignment requires the documented paired coverage; it does not substitute a zero offset when coverage is insufficient.
 
 Run the regression checks with:
 
 ```sh
 node tests/climate.test.cjs
-python -m unittest discover -s tests -p 'test_update_data.py'
+python -m unittest discover -s tests -p 'test_*.py'
 ```
+
+The Pages workflow runs both suites before publishing normal changes or updated observations. Build-script tests use synthetic fixtures and leave the bundled snapshots untouched.
+
+Reproduce the solar CSV from its original provider input with:
+
+```sh
+python scripts/verify_solar_source.py
+python scripts/verify_solar_source.py --offline
+```
+
+The first command downloads the exact reviewed gzip input into `.cache/solar/`, checks its size and SHA-256, integrates each spectrum and compares the entire CSV with the bundled reconstruction. The compressed input is about **604 MiB**; it stays in an ignored local cache and is excluded from the website. The second command reuses that cache without network access. Neither command replaces the bundled CSV. The builder reads spectral rows one at a time, avoiding the memory cost of holding the full input in memory. The pinned URL, input checksum, output checksum and row count are recorded in [data/solar/build-source.json](data/solar/build-source.json). Output checksums normalize CRLF to LF so Windows and Linux agree.
+
+The same check is available in **Actions → Verify original solar reconstruction → Run workflow**. It runs only when requested; the twice-monthly observations updater does not download this historical input. Ordinary tests use small offline fixtures.
 
 Current observations are checked automatically on the **1st and 16th of each month at 07:23 UTC**. The workflow follows the download-and-commit approach in [climate_spiral](https://github.com/BetaNumeric/climate_spiral/blob/main/.github/workflows/update-climate-data.yml), with validation and regression checks before committing. It updates only GISS monthly temperature, NOAA daily CO₂, TSIS daily solar observations and the selected Colorado satellite sea-level release. Historical observations can receive provider revisions; published reconstructions, NNL, population and orbital data stay on their reviewed versions.
 
@@ -77,3 +92,13 @@ GitHub schedules can be delayed, and public-repository schedules are disabled af
 Source URLs, snapshots and combination details are listed in [data/SOURCES.md](data/SOURCES.md). The original Rae/Tripati proxy files remain on disk for reference; the default deep-time CO₂ view uses the published synthesis instead of overlapping raw estimates. Its original output CSV and author license are bundled, with links to the model and archived release. To regenerate the small Osman CSV from the bundled NOAA NetCDF snapshot, install `h5py` in a build environment and run `python scripts/build_osman_gmst.py`. The browser needs no Python dependencies.
 
 Visual correlations help generate questions, but do not establish causation. Dating uncertainty, averaging and shared reconstruction inputs matter. In particular, Osman uses model priors that include greenhouse-gas forcing, so comparing it with CO₂ is not a fully independent test. Miller's sea-level reconstruction also uses temperature-dependent calculations, so agreement with temperature is partly influenced by its reconstruction method.
+
+The browser code is organized as follows:
+
+- `sketch.js`: shared application state, preload, initialization and drawing the two panels.
+- `js/config.js` and `js/time.js`: configuration, source labels and calendar calculations.
+- `js/data/`: common helpers and separate parsers and combinations for temperature, CO₂, solar, sea level and the other comparisons.
+- `js/plot.js` and `js/timeline.js`: drawing series, uncertainty, source joins and historical context.
+- `js/ui.js` and `styles.css`: native controls, keyboard input, the info dialog and appearance.
+
+These files use p5's global mode and are loaded in the order listed in `index.html`; no bundler or package installation is needed. Regression tests load the same list of scripts as the page. The [Processing sketch in `java/`](java/README.md) is an archived desktop prototype with older data and behavior, excluded from web deployments and tests. Historical source files remain available for provenance.

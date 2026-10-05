@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gzip
+import math
 from pathlib import Path
 
 
@@ -9,11 +11,16 @@ def parse_float_row(line: str) -> list[float]:
     stripped = line.strip()
     if not stripped:
         return []
-    return [float(token) for token in stripped.split()]
+    values = [float(token) for token in stripped.split()]
+    if not all(math.isfinite(value) for value in values):
+        raise ValueError("SATIRE arrays must contain only finite values.")
+    return values
 
 
-def read_satire_arrays(input_path: Path) -> tuple[list[float], list[float], list[float], list[list[float]]]:
-    with input_path.open("r", encoding="utf-8", errors="replace") as handle:
+def iter_tsi_rows(input_path: Path):
+    """Integrate one spectral row at a time, including compressed provider files."""
+    open_input = gzip.open if input_path.suffix == ".gz" else open
+    with open_input(input_path, "rt", encoding="utf-8") as handle:
         first_non_comment = None
 
         while True:
@@ -38,8 +45,10 @@ def read_satire_arrays(input_path: Path) -> tuple[list[float], list[float], list
             raise ValueError(
                 f"Wavelength and bin length mismatch: {len(wavelengths)} vs {len(bins)}"
             )
+        if any(width <= 0 for width in bins):
+            raise ValueError("SATIRE wavelength bins must have positive widths.")
 
-        ssi_rows: list[list[float]] = []
+        index = 0
         for line in handle:
             if not line.strip():
                 continue
@@ -48,28 +57,22 @@ def read_satire_arrays(input_path: Path) -> tuple[list[float], list[float], list
                 raise ValueError(
                     f"SSI row length {len(values)} does not match wavelength bins {len(bins)}"
                 )
-            ssi_rows.append(values)
-
-    if len(ssi_rows) != len(years):
-        raise ValueError(
-            f"Time axis length ({len(years)}) and SSI rows ({len(ssi_rows)}) do not match"
-        )
-
-    return wavelengths, bins, years, ssi_rows
+            if index >= len(years):
+                raise ValueError("SSI rows exceed the time axis length")
+            tsi = 0.0
+            for value, bin_width in zip(values, bins):
+                tsi += value * bin_width
+            if not math.isfinite(tsi) or tsi <= 0:
+                raise ValueError("Integrated SATIRE irradiance must be positive and finite.")
+            year_decimal = years[index]
+            yield year_decimal - 1950.0, tsi, year_decimal
+            index += 1
+        if index != len(years):
+            raise ValueError(f"Time axis length ({len(years)}) and SSI rows ({index}) do not match")
 
 
 def build_tsi_csv(input_path: Path, output_path: Path) -> None:
-    _, bins, years, ssi_rows = read_satire_arrays(input_path)
-
-    output_rows = []
-    for index, ssi in enumerate(ssi_rows):
-      tsi = 0.0
-      for value, bin_width in zip(ssi, bins):
-          tsi += value * bin_width
-
-      year_decimal = years[index]
-      output_rows.append((year_decimal - 1950.0, tsi, year_decimal))
-
+    output_rows = list(iter_tsi_rows(input_path))
     output_rows.sort(key=lambda row: row[0], reverse=True)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -88,8 +91,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--input",
         type=Path,
-        default=Path("data/solar/SATIRE-M/SSI_14C_cycle_yearly_cmip_v20160613_fc.txt"),
-        help="Path to SATIRE-M SSI text file.",
+        default=Path(".cache/solar/SSI_14C_cycle_yearly_cmip_v20160613_fc.txt.gz"),
+        help="Path to SATIRE-M SSI text or gzip file; scripts/verify_solar_source.py downloads the pinned source.",
     )
     parser.add_argument(
         "--output",

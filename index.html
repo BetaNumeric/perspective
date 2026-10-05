@@ -5,101 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="data:," />
   <title>Perspective · Climate through time</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #000;
-    }
-
-    canvas {
-      display: block;
-    }
-
-    #data-info-button {
-      position: fixed;
-      left: 12px;
-      bottom: calc(25% + 12px);
-      width: 40px;
-      height: 40px;
-      padding: 0;
-      border: 1px solid #49647c;
-      border-radius: 50%;
-      background: #102b43;
-      color: #edf3f8;
-      font: bold 23px Georgia, serif;
-      cursor: pointer;
-    }
-    #data-info-button:hover { background: #25435c; }
-    button:focus-visible, summary:focus-visible, a:focus-visible {
-      outline: 2px solid #9dd7ff;
-      outline-offset: 3px;
-    }
-    button { -webkit-tap-highlight-color: transparent; }
-    dialog {
-      box-sizing: border-box;
-      width: min(620px, calc(100% - 32px));
-      max-width: none;
-      max-height: min(80vh, calc(100dvh - 32px));
-      padding: 0;
-      border: 1px solid #334b61;
-      border-radius: 10px;
-      color: #d4dde6;
-      background: #071d30;
-      box-shadow: 0 18px 60px #0008;
-      font: 14px/1.6 system-ui, sans-serif;
-      color-scheme: dark;
-    }
-    dialog[open] { display: flex; flex-direction: column; }
-    dialog::backdrop { background: #0009; backdrop-filter: blur(3px); }
-    .info-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-shrink: 0;
-      gap: 16px;
-      padding: 16px 20px;
-      border-bottom: 1px solid #334b61;
-    }
-    .info-header h2 { margin: 0; color: #edf3f8; font-size: 20px; font-weight: 600; }
-    .info-header form { margin: 0; }
-    .info-close {
-      width: 36px;
-      height: 36px;
-      padding: 0;
-      border: 0;
-      border-radius: 6px;
-      background: transparent;
-      color: #d4dde6;
-      font: 26px/1 system-ui, sans-serif;
-      cursor: pointer;
-    }
-    .info-close:hover { background: #25435c; color: #fff; }
-    .info-content {
-      min-height: 0;
-      overflow-y: auto;
-      overscroll-behavior: contain;
-      padding: 4px 20px 20px;
-      scrollbar-width: thin;
-      scrollbar-color: #49647c #0a233a;
-    }
-    .info-content::-webkit-scrollbar { width: 8px; }
-    .info-content::-webkit-scrollbar-track { background: #0a233a; }
-    .info-content::-webkit-scrollbar-thumb { background: #49647c; border-radius: 6px; }
-    .info-content::-webkit-scrollbar-thumb:hover { background: #7391ab; }
-    dialog a { color: #9dd7ff; text-underline-offset: 3px; }
-    dialog p { margin: 16px 0; }
-    dialog details { border-top: 1px solid #334b61; }
-    dialog summary { padding: 12px 0; color: #edf3f8; cursor: pointer; font-weight: 600; }
-    dialog details p:first-of-type { margin-top: 0; }
-    .info-links { padding-top: 16px; border-top: 1px solid #334b61; }
-    .info-links p { margin: 0 0 8px; }
-  </style>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <nav id="dataset-controls" aria-label="Datasets to compare with global temperature">
+    <button type="button" data-comparison="1" aria-label="Carbon dioxide" aria-pressed="true" disabled>CO₂</button>
+    <button type="button" data-comparison="2" aria-label="Orbital eccentricity" aria-pressed="false" disabled>Orbit</button>
+    <button type="button" data-comparison="3" aria-label="Solar irradiance" aria-pressed="false" disabled>Solar</button>
+    <button type="button" data-comparison="4" aria-label="Volcanic optical depth" aria-pressed="false" disabled>Volcanoes</button>
+    <button type="button" data-comparison="5" aria-label="Global sea level" aria-pressed="false" disabled>Sea level</button>
+    <button type="button" data-comparison="6" aria-label="World population" aria-pressed="false" disabled>Population</button>
+  </nav>
+  <div id="app-status" role="status" hidden><p></p></div>
   <button id="data-info-button" type="button" aria-label="About the data"
     aria-haspopup="dialog" aria-controls="about-data"><span aria-hidden="true">i</span></button>
   <dialog id="about-data" aria-labelledby="info-title">
@@ -222,8 +139,9 @@
     </details>
     <details>
     <summary>Controls and updates</summary>
-    <p>Scroll, +/D or −/A to zoom; 0–9 select time scales. C toggles the cursor;
-      P shows performance information. Hover tooltips always include the sample source.</p>
+    <p>Scroll, +/D or −/A to zoom; 0–9 select time scales. C or Space toggles the cursor.
+      Tab focuses dataset buttons; Enter or Space selects one. Left/Right moves between focused buttons.
+      Hover tooltips always include the sample source.</p>
     <p>Each panel fits its visible values and uncertainty bands, including where
       a connecting line meets the left edge. Orbit keeps a fixed vertical scale.
       Similar shapes do not mean equal physical changes. Year markers mean January 1;
@@ -239,27 +157,21 @@
     </div>
   </dialog>
   <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/time.js"></script>
+  <script src="js/data/common.js"></script>
+  <script src="js/data/temperature.js"></script>
+  <script src="js/data/co2.js"></script>
+  <script src="js/data/comparisons.js"></script>
+  <script src="js/data/solar.js"></script>
+  <script src="js/data/sealevel.js"></script>
+  <script src="js/plot.js"></script>
+  <script src="js/timeline.js"></script>
+  <script src="js/ui.js"></script>
   <script src="sketch.js"></script>
   <script>
-    (() => {
-      const infoButton = document.getElementById('data-info-button');
-      const guide = document.getElementById('about-data');
-      infoButton.addEventListener('click', showDataGuide);
-      // Button input belongs to the control rather than the chart beneath it.
-      for (const eventName of ['pointerdown', 'mousedown', 'touchstart', 'wheel']) {
-        infoButton.addEventListener(eventName, event => event.stopPropagation());
-      }
-      infoButton.addEventListener('keydown', event => {
-        if (event.key === ' ' || event.key === 'Enter') event.stopPropagation();
-      });
-      guide.addEventListener('click', event => {
-        if (event.target !== guide) return;
-        const bounds = guide.getBoundingClientRect();
-        if (event.clientX < bounds.left || event.clientX > bounds.right
-          || event.clientY < bounds.top || event.clientY > bounds.bottom) guide.close();
-      });
-      guide.addEventListener('close', () => { redrawRequested = true; });
-    })();
+    if (typeof p5 === 'undefined') reportStartupError(new Error('Could not load the chart library; check your connection'));
+    initializeControls();
   </script>
 </body>
 </html>

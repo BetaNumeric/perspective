@@ -40,8 +40,8 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      - name: Test the updater
-        run: python -m unittest discover -s tests -p 'test_update_data.py'
+      - name: Test data processing
+        run: python -m unittest discover -s tests -p 'test_*.py'
 
       - name: Download and validate current observations
         run: python scripts/update_data.py

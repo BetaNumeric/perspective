@@ -1,6 +1,6 @@
 # Dataset Sources and Coverage
 
-This file documents dataset provenance and approximate coverage used by `sketch.js`.
+This file documents dataset provenance and approximate coverage used by the browser app's `js/data/` modules.
 
 Current GISS, NOAA daily CO₂, TSIS and Colorado satellite observations are eligible for automatic updates twice a month. The provider selection and units are in `update-sources.json`; successful updates create `update-metadata.json` with retrieval dates, actual observation coverage, counts and checksums. The updater downloads complete raw snapshots, preserves provider revisions and missing-value conventions, and validates every response before saving. It does not change the reconstruction inputs or the combination methods described below. Coverage and calibration values quoted here describe the reviewed snapshots; the app recomputes reference offsets from whichever validated observation snapshots are loaded. See the README for activation and local commands.
 
@@ -132,16 +132,19 @@ Modern concentrations and paleo estimates stay on their published ppm scales. Di
 
 ## Solar Irradiance
 
-- `data/solar/SATIRE-M/SSI_14C_cycle_yearly_cmip_v20160613_fc.txt`
+- `.cache/solar/SSI_14C_cycle_yearly_cmip_v20160613_fc.txt.gz`
   - Coverage: 6754.5 BCE to 2015.997 CE (yearly cadence before 1850, daily after)
   - Product: PMIP4 SATIRE-M 14C, CMIP6-scaled (`fc`), recommended for PMIP4-CMIP6 tier-1 past1000
   - Source: https://pmip4.lsce.ipsl.fr/doku.php/data:solar_satire
   - https://sharebox.lsce.ipsl.fr/index.php/s/LpiCUCkSmx0P6bb
-  - Original build input, **not bundled in this checkout**. The compact CSV below is bundled. The spectral integration cannot be independently reproduced here without obtaining this original input.
+  - Exact provider download: https://www2.mps.mpg.de/projects/sun-climate/data/PMIP6/SSI_14C_cycle_yearly_cmip_v20160613_fc.txt.gz
+  - Original build input, cached locally rather than included in the website or repository. The compressed source is 633,841,999 bytes. SHA-256: `61956041de06ecae484eb75e3ed40792a7e9901e898bbc3cee7d8eadb20456a8`.
+  - `python scripts/verify_solar_source.py` downloads and verifies this exact input, streams its integration and compares every output row with the bundled CSV. `--offline` reuses the verified cache. A manual GitHub workflow runs the same check. Neither command changes the bundled dataset.
+  - Independently reproduced on 2026-10-05: all 69,235 rows match exactly. The input/output checksums and row count are pinned in `data/solar/build-source.json`. The output SHA-256 after normalizing CRLF to LF is `65751933b4590d37b0129f4c31af84c0cb12d60225b9e9770689200d1683e4db`.
 
 - `data/solar/SATIRE_M_TSI_14C_fc.csv`
   - Coverage: project time ~[-8704.5, 65.9973]
-  - Type: compact runtime TSI derivative used by `sketch.js`
+  - Type: compact runtime TSI derivative used by `js/data/solar.js`
   - Build: `python scripts/build_satire_tsi.py` (TSI computed as `sum(SSI * wavelength_bin)` for each time step)
   - This is already a **PMIP4/CMIP6 composite**, despite the abbreviated filename. The retained components are SATIRE-M before 1610, SATIRE-T for 1610–1849, and the CMIP6 SATIRE/NRL mixture from 1850 until the NNL continuation begins in 1874. The component identities follow the author's data page and PMIP4 documentation; all identifiable boundaries are marked and disconnected.
   - Author component documentation: https://www2.mps.mpg.de/projects/sun-climate/data_body.html
@@ -151,14 +154,14 @@ Modern concentrations and paleo estimates stay on their published ppm scales. Di
 
 - `data/solar/nnl_tsi_P1D.txt`
   - Coverage: ~late 1800s to near-present (daily)
-  - Type: continuation segment merged on top of SATIRE in `sketch.js`
+  - Type: continuation segment merged on top of SATIRE in `js/data/solar.js`
   - Source: https://lasp.colorado.edu/lisird/latis/dap/nnl_tsi_P1D.txt
   - Metadata: https://lasp.colorado.edu/lisird/latis/dap/nnl_tsi_P1D.das
   - Product identity: NASA/NOAA/LASP NNL daily TSI model, rather than NRLTSI2. The text time column is days since 1610-01-01; it is converted using the Gregorian calendar instead of dividing by a fixed mean year length.
 
 - `data/solar/tsis_tsi_24hr.txt`
   - Coverage: recent years to present (24-hour cadence)
-  - Type: latest continuation segment merged on top of NNL in `sketch.js`
+  - Type: latest continuation segment merged on top of NNL in `js/data/solar.js`
   - Source: https://lasp.colorado.edu/lisird/latis/dap/tsis_tsi_24hr.txt
   - Metadata: https://lasp.colorado.edu/lisird/latis/dap/tsis_tsi_24hr.das
   - Documentation: https://lasp.colorado.edu/media/projects/tsis/documentation/README.TSIS.pdf
@@ -168,7 +171,7 @@ Modern concentrations and paleo estimates stay on their published ppm scales. Di
 
 All solar values represent total solar irradiance at **1 AU**, excluding the variation caused solely by Earth's changing distance from the Sun. TSIS observations retain their measured level. Extremes are not removed merely for being unusually large or small: solar rotation, sunspots and the approximately 11-year activity cycle produce real variations (https://scdi.smce.nasa.gov/solar_data_access.html). Zeros/missing values are omitted according to provider metadata; provisional TSIS readings remain visible and labelled but do not calibrate the models.
 
-For each calibration, pair the two records by the **same Gregorian date**. Average their paired daily differences within each calendar month, require at least 15 paired days per month and 12 qualifying months overall, then use the **median of those monthly differences** as one constant offset. This avoids comparing differently sampled days and reduces the influence of exceptional months, without deleting plotted readings or scaling variability. Insufficient paired coverage returns an unavailable offset rather than an invented estimate; calibration diagnostics record coverage and median absolute residual deviation. That residual spread is a diagnostic, not a confidence interval or a complete uncertainty estimate.
+For each calibration, pair the two records by the **same Gregorian date**. Average their paired daily differences within each calendar month, require at least 15 paired days per month and 12 qualifying months overall, then use the **median of those monthly differences** as one constant offset. This avoids comparing differently sampled days and reduces the influence of exceptional months, without deleting plotted readings or scaling variability. Insufficient paired coverage stops the combination with a visible error rather than substituting a zero offset; calibration diagnostics record coverage and median absolute residual deviation. That residual spread is a diagnostic, not a confidence interval or a complete uncertainty estimate.
 
 NNL is aligned to final TSIS observations over their available overlap. The PMIP4 base is then aligned to the adjusted NNL over the **first 22 years of overlap near the 1874 join**, roughly two solar cycles, instead of averaging changing model differences across 140 years. The interval is selected by this fixed rule, not tuned to make endpoint values meet. One common offset is applied to every PMIP4 component, preserving the provider's internal combination. With the bundled snapshots: NNL offset **+0.24962201 W/m²**, from 83 qualifying months / 2,157 matched days (2018-02-01 to 2024-12-31); PMIP4 offset **+1.02177973 W/m²**, from 264 months / 8,028 matched days (1874-05-09 to 1896-04-30). The 50-day-mean step at the 1874 join falls from about 0.2064 to **0.0539 W/m²**; the 2018 step is about −0.0207 W/m². Small remaining differences are retained and the joins stay disconnected.
 
@@ -210,7 +213,7 @@ Alternatives reviewed: the final CMIP7 historical solar forcing v4.6 covers 1850
 
 ### Sea-level combination method and limitations
 
-The former geological and instrumental buttons are one **Global sea level** view. The modern reference is the Jevrejeva 1950 annual mean. Colorado is aligned to that curve by averaging satellite measurements into calendar months, comparing only matching months within the actual 1992–2010 overlap, and averaging the monthly differences equally. With the bundled snapshots, subtract 0.06986125 m from Jevrejeva and add 0.07363510 m to Colorado. Variability, ages and uncertainty widths are preserved. Colorado supplies the satellite-era segment; Jevrejeva supplies earlier monthly samples.
+The **Global sea level** view combines geological, tide-gauge and satellite records. The modern reference is the Jevrejeva 1950 annual mean. Colorado is aligned to that curve by averaging satellite measurements into calendar months, comparing only matching months within the actual 1992–2010 overlap, and averaging the monthly differences equally. With the bundled snapshots, subtract 0.06986125 m from Jevrejeva and add 0.07363510 m to Colorado. Variability, ages and uncertainty widths are preserved. Colorado supplies the satellite-era segment; Jevrejeva supplies earlier monthly samples.
 
 Miller is rebased separately by subtracting its published zero-age GMGSL value of −0.83 m, setting that point to zero. This is only an approximate compatible geological reference under the archive's BP convention, not an observed 1950 calibration. Geological samples are retained only before the earliest tide-gauge sample. Consequently the newest retained geological point is about 640.2 CE and the first tide-gauge sample is 1807.5417 CE. That interval is shaded and labelled as a gap, with no interpolation. All source joins are disconnected.
 
@@ -226,3 +229,11 @@ The Kopp archive contains local coastal samples, not the published global poster
   - Runtime use: only `World` / `OWID_WRL`. Prefer the historical `Population` column when supplied; use the projection column otherwise. The bundled historical series ends in 2023; 2024 onward are projections, labelled in tooltips and drawn as dashed lines. Years beyond the current calendar year are excluded.
   - Historical values are already a provider composite and remain unchanged. This CSV has no per-row provenance for the historical component estimates; internal source transitions are not inferred or given invented markers. Population estimates and projections have uncertainty that is not supplied in this file.
   - Lines connect annual samples only within each historical or projection segment. Their visible intersection at the left edge contributes to vertical scaling; no extra daily estimates or extension past the latest sample are added. Population is not part of the automatic observation updater.
+
+## Timeline context
+
+Historical events provide orientation rather than climate measurements. Ancient dates and durations are approximate. The Confucius band uses the traditional 551–479 BCE dates, converted to astronomical years −550 to −478 (year 0 corresponds to 1 BCE); see the [Stanford Encyclopedia of Philosophy](https://plato.stanford.edu/entries/confucius/). The Paris Agreement marker identifies its adoption on 12 December 2015, rather than the 2016 signing period; see the [UNFCCC announcement](https://unfccc.int/news/finale-cop21).
+
+The approximate boundary for written records is placed near 3500 BCE rather than 7000 BCE; the development of writing spans the fourth millennium BCE and is not a single precise event ([Metropolitan Museum of Art](https://www.metmuseum.org/essays/the-origins-of-writing)). Muhammad’s lifespan is shown as approximately 570–632 CE ([Metropolitan Museum of Art](https://www.metmuseum.org/essays/the-birth-of-islam)); Jesus’s as approximately 4 BCE–30 CE, within the scholarly dating range ([Oklahoma State University open textbook](https://open.library.okstate.edu/interculturalcommunication/chapter/history-3/)).
+
+The WWI band runs from 28 July 1914 to the 11 November 1918 armistice ([National Army Museum timeline](https://ww1.nam.ac.uk/timeline/)); it identifies the usual fighting period rather than the 1919 peace treaty. WWII runs from the 1 September 1939 invasion of Poland in Europe ([USHMM](https://encyclopedia.ushmm.org/content/en/article/the-holocaust-and-world-war-ii-key-dates?series=7)) to Japan’s formal surrender on 2 September 1945 ([National Archives](https://www.archives.gov/milestone-documents/surrender-of-japan)).

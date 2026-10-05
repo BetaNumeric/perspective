@@ -65,7 +65,12 @@ for (const name of ['createCanvas', 'resizeCanvas', 'cursor', 'textAlign',
 }
 
 vm.createContext(context);
-vm.runInContext(fs.readFileSync('sketch.js', 'utf8'), context);
+const appScripts = [...fs.readFileSync('index.html', 'utf8').matchAll(/<script src="([^"]+)"/g)]
+  .map(match => match[1]).filter(path => !path.startsWith('https://'));
+function loadApp(targetContext) {
+  for (const path of appScripts) vm.runInContext(fs.readFileSync(path, 'utf8'), targetContext, {filename:path});
+}
+loadApp(context);
 const run = (expression) => vm.runInContext(expression, context);
 run('preload(); setup()');
 
@@ -126,7 +131,7 @@ test('rendering preserves both sides of every source join and leaves it disconne
     const indices = new Set(series.extremaPreservingIndices(series.dataX.length));
     const joins = [];
     for (let i = 1; i < series.dataX.length; i++) {
-      if (series.temperatureRows[i - 1].source !== series.temperatureRows[i].source) {
+      if (series.seriesRows[i - 1].source !== series.seriesRows[i].source) {
         joins.push({ retained: indices.has(i - 1) && indices.has(i),
           connected: series.canConnectIndices(i - 1, i) });
       }
@@ -243,7 +248,7 @@ test('modern CO2 connects available observations without adding missing samples'
   const result = run(`(() => {
     const noaa = parseNoaaDailyCo2Rows(['2020 1 1 2020.0 410', '2020 2 1 2020.0847 420']);
     const scripps = parseScrippsDailyCo2Rows(['1960,1,1,310,,,MLO', '1960,2,1,320,,,MLO']);
-    const make = rows => new Data(buildTimeValueTable(rows,'co2','CO2'),'time','CO2','ppm',1,0,0,true);
+    const make = rows => new Data(buildTimeValueTable(rows,'co2','CO2'),'time','CO2','ppm',1,0, true);
     return [noaa,scripps].map(rows => ({ count: rows.length, values: rows.map(row => row.co2),
       connected:make(rows).canConnectIndices(0,1) }));
   })()`);
@@ -269,7 +274,7 @@ test('missing observations receive no markers while source changes remain marked
         {time:bp-5,co2:410,source:'co2-noaa',maxGapYears:0.01},
         {time:bp-10,co2:400,source:'co2-scripps'}
       ];
-      const series = new Data(buildTimeValueTable(rows,'co2','CO2'),'time','CO2','ppm',1,0,0,true);
+      const series = new Data(buildTimeValueTable(rows,'co2','CO2'),'time','CO2','ppm',1,0, true);
       series.rectY = 60; series.rectH = 240;
       series.drawSourceJoins(3);
     })()`);
@@ -288,7 +293,7 @@ test('drawing fewer points preserves continuous solar segments and actual long g
   const result = run(`(() => {
     const make = days => new Data(buildTimeValueTable(days.map(day=>({time:day/365.2425,
       irradiance:1361, source:'solar-tsis', maxGapYears:7/365.2425})), 'irradiance','Solar Irradiance'),
-      'time','Solar Irradiance','W/m²',1,0,0,true);
+      'time','Solar Irradiance','W/m²',1,0, true);
     return { continuous:make([30,25,20,15,10,5,0]).canConnectIndices(0,6),
       missing:make([30,25,5,0]).canConnectIndices(0,3) };
   })()`);
@@ -489,13 +494,10 @@ test('pixel thinning retains the visible volcanic maximum', () => {
 });
 
 test('top buttons change only the comparison and temperature always fits visible data', () => {
-  const buttonLabels = [];
-  const originalText = context.text;
-  context.text = value => buttonLabels.push(value);
-  run('GUI()');
-  context.text = originalText;
-  assert.deepEqual(buttonLabels, ['CO₂','Orbit','Solar','Volcanoes','Sea level','Population']);
-  run('mouseButton = LEFT; mouseY = 10; mouseX = width * 3.5 / 6; mousePressed(); draw()');
+  const html = fs.readFileSync('index.html','utf8');
+  assert.deepEqual([...html.matchAll(/data-comparison="\d"[^>]*>([^<]+)/g)].map(match=>match[1]),
+    ['CO₂','Orbit','Solar','Volcanoes','Sea level','Population']);
+  run('selectComparison(4); draw()');
   assert.equal(run('selectedData'), 4);
   assert.equal(run('data[0].position'), 0);
   run('setZoom(25); draw()');
@@ -514,6 +516,45 @@ test('top buttons change only the comparison and temperature always fits visible
   run('mouseY = 0; mouseX = 0; selectComparison(1)');
 });
 
+test('native dataset controls expose the selected state and own activation and navigation keys', () => {
+  const makeControl = comparison => ({dataset:{comparison}, attributes:{}, style:{}, events:{},
+    addEventListener(name, handler) { (this.events[name] ||= []).push(handler); },
+    setAttribute(name, value) { this.attributes[name]=value; },
+    focus() { context.document.activeElement=this; }});
+  const buttons = Array.from({length:6},(_,index)=>makeControl(String(index+1)));
+  const guide = {...makeControl(), open:false};
+  const info = makeControl();
+  const canvas = makeControl();
+  context.document = {querySelectorAll:()=>buttons, querySelector:()=>canvas,
+    getElementById:id=>id==='about-data' ? guide : info};
+  try {
+    run('selectComparison(1); initializeControls()');
+    assert.ok(buttons.every(button=>!button.disabled));
+    buttons[3].events.click[0]();
+    assert.equal(run('selectedData'),4);
+    assert.deepEqual(buttons.map(button=>button.attributes['aria-pressed']), ['false','false','false','true','false','false']);
+    assert.match(canvas.attributes['aria-label'], /Volcanic optical depth compared with global temperature/);
+    const before = run('({zoom:scrollValue,cursor:showCursor})');
+    for (const key of [' ','Enter']) {
+      let stopped = false;
+      buttons[3].events.keydown[0]({key,stopPropagation(){stopped=true;}});
+      assert.equal(stopped,true);
+    }
+    for (const [key,expected] of [['ArrowRight',5],['Home',1],['ArrowLeft',6],['End',6]]) {
+      const focusedIndex = run('selectedData')-1;
+      let stopped = false, prevented = false;
+      buttons[focusedIndex].events.keydown[1]({key,stopPropagation(){stopped=true;},preventDefault(){prevented=true;}});
+      assert.equal(stopped && prevented,true);
+      assert.equal(run('selectedData'),expected);
+      assert.equal(context.document.activeElement,buttons[expected-1]);
+    }
+    assert.deepEqual(run('({zoom:scrollValue,cursor:showCursor})'), before);
+  } finally {
+    delete context.document;
+    run('selectComparison(1)');
+  }
+});
+
 test('autoscaling uses the visible line intersection rather than an off-screen extreme', () => {
   const bounds = run(`(() => {
     setZoom(25); oneYear = -1000 / scrollValue;
@@ -523,7 +564,7 @@ test('autoscaling uses the visible line intersection rather than an off-screen e
       { time: bp - 2, temperature: 4 },
       { time: bp - 100, temperature: 1000 }
     ], 'temperature', 'Temperature');
-    const series = new Data(table, 'time', 'Temperature', '°C', 0, 0, 0, true);
+    const series = new Data(table, 'time', 'Temperature', '°C', 0, 0, true);
     series.draw();
     return [series.localMinY, series.localMaxY];
   })()`);
@@ -573,7 +614,7 @@ test('edge scaling preserves source joins, point-only samples and actual data ga
       setZoom(25); oneYear=-1000/scrollValue; const bp=currentYear-1950;
       const rows=[{time:bp-1,co2:2,source:'recent'}, {time:bp-2,co2:4,source:'recent'},
         {time:bp-100,co2:1000,${olderMetadata}}];
-      const series=new Data(buildTimeValueTable(rows,'co2','CO2'),'time','CO2','ppm',1,0,0,true);
+      const series=new Data(buildTimeValueTable(rows,'co2','CO2'),'time','CO2','ppm',1,0, true);
       series.draw(); return [series.localMinY,series.localMaxY];
     })()`);
     assert.deepEqual([...bounds],[2,4]);
@@ -585,7 +626,7 @@ test('a continuous uncertainty band contributes only its bounds at the visible e
     setZoom(1); oneYear=-1000; const bp=currentYear-1950;
     const rows=[{time:bp-1,co2:300,lower:250,upper:350,band:true,source:'co2-cencopip'},
       {time:bp-2,co2:200,lower:150,upper:250,band:true,source:'co2-cencopip'}];
-    const series=new Data(buildTimeValueTable(rows,'co2','CO2'),'time','CO2','ppm',1,0,0,true);
+    const series=new Data(buildTimeValueTable(rows,'co2','CO2'),'time','CO2','ppm',1,0, true);
     series.draw(); return {lower:series.localMinY,upper:series.localMaxY};
   })()`);
   assert.ok(Math.abs(result.lower - (250-0.265*100)) < 1e-9);
@@ -603,7 +644,7 @@ test('tooltips always identify single-source datasets and retired shortcuts do n
     assert.ok(labels.some(label=>label.includes('Source: Zeebe 2019 ZB18a')));
     const before = run('({zoom:scrollValue,cursor:showCursor,comparison:selectedData})');
     context.fetch = () => { throw new Error('Retired shortcuts must not request data'); };
-    run("for (const pressedKey of ['v','V','r','R']) { key=pressedKey; keyPressed(); }");
+    run("for (const pressedKey of ['v','V','r','R','p','P']) { key=pressedKey; keyPressed(); }");
     assert.deepEqual(run('({zoom:scrollValue,cursor:showCursor,comparison:selectedData})'),before);
   } finally {
     context.text=originalText;
@@ -622,7 +663,7 @@ test('a drawn uncertainty band fits the visible scale without using off-screen b
       {time:bp-3,co2:350,lower:0,upper:20000,source:'co2-ice'},
       {time:bp-100,co2:900,lower:10,upper:2000,band:true,source:'co2-cencopip'}
     ], 'co2', 'CO2');
-    const series = new Data(table, 'time', 'CO2', 'ppm', 1, 0, 0, true);
+    const series = new Data(table, 'time', 'CO2', 'ppm', 1, 0, true);
     series.draw();
     const visible = [series.localMinY,series.localMaxY];
     series.yScrolling = false; series.draw();
@@ -653,7 +694,7 @@ test('uncertainty polygons stay inside the panel clip and never bridge a source 
         {time:bp-4,co2:400,lower:300,upper:500,band:true,source:'co2-cencopip',segment:'older'},
         {time:bp-5,co2:450,lower:350,upper:550,band:true,source:'co2-cencopip',segment:'older'}
       ], 'co2', 'CO2');
-      const series = new Data(table, 'time', 'CO2', 'ppm', 1, 0, 0, true);
+      const series = new Data(table, 'time', 'CO2', 'ppm', 1, 0, true);
       series.rectY = height / GUI_HEIGHT_DIVISOR;
       series.draw();
       return {top:series.rectY,bottom:series.rectY+series.rectH};
@@ -675,17 +716,106 @@ test('uncertainty polygons stay inside the panel clip and never bridge a source 
 });
 
 test('empty datasets do not crash the renderer', () => {
-  assert.equal(run("new Data(new p5.Table(), 'time', 'Temperature', '°C', 0, 0, 0, true).dataX.length"), 0);
-  run("new Data(null, 'time', 'Temperature', '°C', 0, 0, 0, true).draw()");
+  assert.equal(run("new Data(new p5.Table(), 'time', 'Temperature', '°C', 0, 0, true).dataX.length"), 0);
+  run("new Data(null, 'time', 'Temperature', '°C', 0, 0, true).draw()");
+});
+
+test('large wheel movements remain proportional and opposite movements restore the zoom', () => {
+  const savedZoom = run('scrollValue');
+  try {
+    run('setZoom(1000); mouseWheel({delta:-600})');
+    assert.ok(run('scrollValue') > 250 && run('scrollValue') < 300);
+    run('mouseWheel({delta:600})');
+    assert.ok(Math.abs(run('scrollValue') - 1000) < 1e-9);
+  } finally {
+    run(`setZoom(${savedZoom})`);
+  }
 });
 
 test('reading the guide allows scrolling without changing the plot', () => {
   context.document = { getElementById: () => ({ open: true }) };
   const zoom = run('scrollValue');
-  assert.equal(run('mouseWheel({delta: 100})'), true);
-  run("key = '+'; keyPressed(); mouseDragged()");
-  assert.equal(run('scrollValue'), zoom);
-  delete context.document;
+  const savedMouse = {mouseIsPressed:context.mouseIsPressed, mouseY:context.mouseY,
+    pmouseX:context.pmouseX, pmouseY:context.pmouseY};
+  try {
+    assert.equal(run('mouseWheel({delta: 100})'), true);
+    run("key = '+'; keyPressed(); mouseDragged()");
+    assert.equal(run('scrollValue'), zoom);
+    run('data[selectedData].rectY = panelTargetY(1)');
+    const target = run('data[selectedData].rectY');
+    context.mouseIsPressed = true;
+    context.pmouseX = context.width / 2;
+    context.pmouseY = target + 20;
+    context.mouseY = target + 60;
+    run('data[selectedData].draw()');
+    assert.equal(run('data[selectedData].rectY'), target);
+  } finally {
+    Object.assign(context, savedMouse);
+    delete context.document;
+  }
+});
+
+test('solar combination rejects unavailable calibration rather than inventing a zero offset', () => {
+  assert.throws(() => run('mergeSolarTableWithNnlAndTsis(sourceTables.solarBase, sourceTables.solarIrradianceNnlRaw, [])'), /paired NNL\/TSIS/);
+  assert.throws(() => run('mergeSolarTableWithNnlAndTsis(null, sourceTables.solarIrradianceNnlRaw, sourceTables.solarIrradianceTsisRaw)'), /paired PMIP4\/NNL/);
+});
+
+test('failed loads and failed calibration show an error without drawing an incomplete chart', () => {
+  for (const scenario of ['download', 'calibration']) {
+    const message = {textContent:''};
+    const status = {hidden:true, role:'status', setAttribute:(_key,value)=>{status.role=value;}, querySelector:()=>message};
+    let drew = false;
+    const failureContext = {...context, background:()=>{drew=true;},
+      document:{getElementById:id=>id==='app-status' ? status : null}};
+    if (scenario === 'download') {
+      failureContext.loadStrings = (_file,_success,failure) => { failure(); return []; };
+    }
+    vm.createContext(failureContext);
+    loadApp(failureContext);
+    if (scenario === 'download') vm.runInContext('preload()', failureContext);
+    else vm.runInContext("initializeView = () => { throw new Error('Unavailable solar calibration'); }", failureContext);
+    vm.runInContext('setup(); draw()', failureContext);
+    assert.equal(status.hidden, false);
+    assert.equal(status.role, 'alert');
+    assert.match(message.textContent, scenario === 'download' ? /Could not load/ : /Unavailable solar calibration/);
+    assert.equal(drew, false);
+  }
+});
+
+test('visibility ignores future and invalid readings while sorting values with their sources', () => {
+  const savedZoom = run('scrollValue');
+  try {
+    const result = run(`(() => {
+      setZoom(1); oneYear = -1000;
+      const bp = currentYear - 1950;
+      const series = new Data(buildTimeValueTable([
+        {time:bp+0.1,co2:20000,source:'future'},
+        {time:bp-0.2,co2:300,source:'older'},
+        {time:bp-0.1,co2:400,source:'newer'},
+        {time:bp-0.3,co2:NaN,source:'invalid'}
+      ],'co2','CO2'),'time','CO2','ppm',1,0,true);
+      series.draw();
+      return {visible:series.visiblePointCount(), values:series.dataY,
+        sources:series.seriesRows.map(row=>row.source),
+        min:series.localMinY,max:series.localMaxY,connected:series.canConnectIndices(0,1)};
+    })()`);
+    assert.equal(result.visible, 2);
+    assert.deepEqual([...result.values], [400,300]);
+    assert.deepEqual([...result.sources], ['newer','older']);
+    assert.equal(result.min, 300);
+    assert.equal(result.max, 400);
+    assert.equal(result.connected, false);
+  } finally {
+    run(`setZoom(${savedZoom}); oneYear = -1000/scrollValue`);
+  }
+});
+
+test('calendar conversion preserves early Common Era years and the 99/100 boundary', () => {
+  for (const date of ['0000-02-29', '0001-01-01', '0004-02-29', '0099-12-31', '0100-01-01']) {
+    const [year,month,day] = date.split('-').map(Number);
+    assert.equal(run(`new Date(millisecondsFromDecimalYear(decimalYearFromYmd(${year},${month},${day}))).toISOString().slice(0,10)`), date);
+  }
+  assert.equal(run('decimalYearFromYmd(99,12,32)'), 100);
 });
 
 test('calendar ticks use real month boundaries and cursor dates include leap days', () => {
@@ -725,8 +855,8 @@ test('rendered ticks, cursor and observations agree on calendar dates at desktop
         {time:decimalYearFromYmd(2025,11,1)-1950,co2:320,source:'co2-noaa',sampleDate:'2025-11-01'}
       ];
       const datedTable = buildTimeValueTable(datedRows, 'co2', 'CO2');
-      data = [new Data(datedTable,'time','CO2','ppm',0,0,0,true),
-        new Data(datedTable,'time','CO2','ppm',1,0,0,true)];
+      data = [new Data(datedTable,'time','CO2','ppm',0,0, true),
+        new Data(datedTable,'time','CO2','ppm',1,0, true)];
       event = []; selectedData = 1; showCursor = true;`);
     for (const zoom of [1, 10]) {
       labels.length = 0; lines.length = 0;
