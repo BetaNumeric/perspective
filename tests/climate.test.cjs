@@ -83,10 +83,11 @@ test('global temperature uses baseline offsets without changing variability', ()
       pages: parseNeukomTemperatureRows(sourceTables.neukomTempRaw),
       osman: parseOsmanTemperatureRows(sourceTables.osmanTempRaw),
       snyder: parseSnyderTemperatureRows(sourceTables.snyderTempRaw),
-      hansen: parseHansenTemperatureRows(sourceTables.hansenTempRaw)
+      hansen: parseHansenTemperatureRows(sourceTables.hansenTempRaw),
+      phanda: parsePhanDaTemperatureRows(sourceTables.phanDaTempRaw)
     };
     const offsets = { giss: -temperatureCalibration.gissOffset, pages: 0,
-      osman: temperatureCalibration.osmanOffset, snyder: temperatureCalibration.snyderOffset, hansen: -14 };
+      osman: temperatureCalibration.osmanOffset, snyder: temperatureCalibration.snyderOffset, hansen: -14, phanda: -14 };
     let preserved = true;
     for (const source of Object.keys(originals)) {
       const byTime = new Map();
@@ -105,7 +106,7 @@ test('global temperature uses baseline offsets without changing variability', ()
       referenceMean: reference.reduce((sum, row) => sum + row.temperature, 0) / reference.length,
       deepMaximum: Math.max(...rows.filter(row => row.source === 'hansen').map(row => row.temperature)) };
   })()`);
-  assert.deepEqual([...result.sources], ['giss', 'pages', 'osman', 'snyder', 'hansen']);
+  assert.deepEqual([...result.sources], ['giss', 'pages', 'osman', 'snyder', 'hansen', 'phanda']);
   assert.equal(result.preserved, true);
   assert.ok(Math.abs(result.referenceMean) < 1e-12);
   assert.ok(result.deepMaximum > 10);
@@ -123,6 +124,106 @@ test('Osman alignment compares the same complete 200-year periods with PAGES2k',
   assert.equal(result.count, 1600);
   assert.equal(result.bins, 8);
   assert.ok(Math.abs(result.difference) < 1e-12);
+});
+
+test('PhanDA preserves its archived ages and 5th–95th percentiles under one reference shift', () => {
+  const raw = fs.readFileSync('data/temperature/phanda2024-percentiles.csv', 'utf8').replace(/\r\n/g, '\n');
+  assert.equal(require('node:crypto').createHash('sha256').update(raw).digest('hex'),
+    '22cad7964bac3b679ad83bf8a9c83eb66e995898a01eb9e93142087b2d4f6e1f');
+  const result = run(`(() => {
+    const original = parsePhanDaTemperatureRows(sourceTables.phanDaTempRaw);
+    const rows = sourceTables.temperature.temperatureRows;
+    const retained = rows.filter(row => row.source === 'phanda');
+    const hansen = rows.filter(row => row.source === 'hansen');
+    return { rawCount: original.length, count: retained.length,
+      newest: retained[0], oldest: retained.at(-1), hansenOldest: hansen.at(-1),
+      reference: temperatureCalibration.phanDaReference,
+      sourceLabels: retained.map(sampleTimeLabel),
+      preserved: retained.every(row => {
+        const raw = original.find(value => value.time === row.time);
+        return raw && row.temperature === raw.temperature - 14 && row.lower === raw.lower - 14
+          && row.upper === raw.upper - 14 && row.stage === raw.stage
+          && row.ageYoungerMa === raw.ageYoungerMa && row.ageOlderMa === raw.ageOlderMa;
+      }),
+      excluded: rows.every(row => row.source !== 'phanda' || row.ageYoungerMa >= 66),
+      representativeAge: original.find(row => row.stage === 'Ypresian').time };
+  })()`);
+  assert.equal(result.rawCount, 85);
+  assert.equal(result.count, 63);
+  assert.equal(result.reference, 14);
+  assert.equal(result.preserved, true);
+  assert.equal(result.excluded, true);
+  assert.equal(result.newest.time, -69085000);
+  assert.equal(result.newest.temperature, 24.5068077268145 - 14);
+  assert.equal(result.newest.joinTime, -66000000);
+  assert.equal(result.oldest.time, -481965000);
+  assert.equal(result.oldest.ageOlderMa, 486.85);
+  assert.equal(result.hansenOldest.time, -65522800);
+  assert.ok(Math.abs(result.newest.temperature - result.hansenOldest.temperature) > 1);
+  assert.equal(result.representativeAge, -52035000, 'retain the author age rather than recomputing it from the bounds');
+  assert.equal(result.sourceLabels[0], '66–72.17 million years BP');
+  assert.equal(result.sourceLabels.at(-1), '477.08–486.85 million years BP');
+});
+
+test('PhanDA fails visibly for incomplete intervals, changed columns or invalid percentiles', () => {
+  const lines = fs.readFileSync('data/temperature/phanda2024-percentiles.csv', 'utf8').trim().split(/\r?\n/);
+  const changed = (column, value) => {
+    const copy = [...lines], fields = copy[23].split(',');
+    fields[column] = value; copy[23] = fields.join(','); return copy;
+  };
+  for (const malformed of [lines.slice(0,-1), [lines[0],...lines.slice(2)],
+    [lines[0].replace('GMST_05','GMST_025'),...lines.slice(1)],
+    changed(3,'65'), changed(5,'80'), changed(6,'99'), changed(8,''), changed(8,'NaN')]) {
+    assert.throws(() => run(`parsePhanDaTemperatureRows(${JSON.stringify(malformed)})`), /PhanDA/);
+  }
+});
+
+test('the PhanDA join marker uses its 66 Ma boundary and neither line nor band crosses it', () => {
+  const saved = {line:context.line, text:context.text};
+  const lines = [], labels = [];
+  context.line = (...args) => lines.push(args);
+  context.text = value => labels.push(String(value));
+  try {
+    const result = run(`(() => {
+      setZoom(100000000 * 1000 / (width-shift)); oneYear=-1000/scrollValue;
+      const series=data[0]; series.rectY=panelTargetY(0); series.rectH=height/DATA_PANEL_HEIGHT_DIVISOR;
+      const index=series.seriesRows.findIndex(row=>row.source==='phanda');
+      const vertices=[]; let polygon=[];
+      const oldBegin=beginShape, oldVertex=vertex, oldEnd=endShape;
+      beginShape=()=>{polygon=[];}; vertex=(x,y)=>polygon.push([x,y]); endShape=()=>vertices.push(polygon);
+      try {series.drawUncertaintyBands(index+3,width,300,oneYear,-1);}
+      finally {beginShape=oldBegin;vertex=oldVertex;endShape=oldEnd;}
+      series.drawSourceJoins(series.visiblePointCount()+1);
+      return {joinX:width-oneYear*(-66000000-series.BP),
+        oldestHansenX:width-oneYear*(series.dataX[index-1]-series.BP),
+        phanDaX:width-oneYear*(series.dataX[index]-series.BP),
+        connected:series.canConnectIndices(index-1,index), vertices};
+    })()`);
+    assert.equal(result.connected,false);
+    assert.ok(labels.includes('PhanDA / Hansen'));
+    assert.ok(lines.some(([x,,endX]) => Math.abs(x-result.joinX)<1e-9 && x===endX));
+    assert.ok(result.vertices.at(-1).every(([x]) => x <= result.phanDaX));
+    assert.ok(result.phanDaX < result.joinX && result.joinX < result.oldestHansenX);
+  } finally {Object.assign(context,saved);}
+});
+
+test('deep-time endpoint tooltips tolerate coordinate rounding without extrapolating beyond the data', () => {
+  const savedWidth = context.width;
+  context.width = 375;
+  try {
+    const result = run(`(() => {
+      setZoom(500000000 * 1000 / (width-shift)); oneYear=-1000/scrollValue;
+      const series=data[0], count=series.dataX.length, oldest=series.dataX.at(-1);
+      const pixel=width-oneYear*(oldest-series.BP)-shift;
+      const timeAtPixel=series.BP+(width-pixel-shift)/oneYear;
+      return {count, index:series.nearestVisibleIndex(timeAtPixel,count),
+        before:series.nearestVisibleIndex(oldest-1,count),
+        after:series.nearestVisibleIndex(series.dataX[0]+1,count)};
+    })()`);
+    assert.equal(result.index,result.count-1);
+    assert.equal(result.before,-1);
+    assert.equal(result.after,-1);
+  } finally {context.width = savedWidth;}
 });
 
 test('Snyder converts its published 0–5 ka reference without fitting the glacial endpoints', () => {
@@ -189,13 +290,13 @@ test('temperature and ice-core bands keep the published uncertainty definitions 
       valid: temperature.seriesRows.filter(row => row.band).every(row =>
         row.lower <= row.temperature && row.temperature <= row.upper &&
         row.uncertainty === ({pages:'95% ensemble range', osman:'±1σ ensemble spread',
-          snyder:'95% reconstruction interval'})[row.source]),
+          snyder:'95% reconstruction interval', phanda:'90% ensemble range'})[row.source]),
       iceCount: ice.length,
       icePreserved: ice.every(row => row.band && row.uncertainty === '±1σ measurement uncertainty' &&
         row.co2 === originalIce.get(row.time).co2 && row.lower === originalIce.get(row.time).lower &&
         row.upper === originalIce.get(row.time).upper) };
   })()`);
-  assert.deepEqual([...result.sources], ['pages', 'osman', 'snyder']);
+  assert.deepEqual([...result.sources], ['pages', 'osman', 'snyder', 'phanda']);
   assert.equal(result.temperatureBand, true);
   assert.equal(result.valid, true);
   assert.ok(result.iceCount > 1000);
@@ -213,7 +314,10 @@ test('published temperature and ice-core bands render separately and fit the vis
   context.vertex = (x,y) => vertices.push([x,y]);
   context.endShape = () => polygons.push({vertices,clipped});
   try {
-    for (const [dataset, years, expectedSources] of [[0,30000,['pages','osman','snyder']], [1,900000,['co2-ice']]]) {
+    for (const [dataset, years, expectedSources] of [[0,30000,['pages','osman','snyder']], [1,900000,['co2-ice']],
+      [0,500000000,['pages','osman','snyder','phanda']],
+      [5,30000,['sea-kopp','sea-lambeck','sea-spratt-short']],
+      [5,850000,['sea-kopp','sea-lambeck','sea-spratt-short','sea-spratt-long']]]) {
       polygons.length = 0;
       const state = run(`(() => {
         setZoom(${years} * 1000 / (width - shift)); oneYear = -1000 / scrollValue;
@@ -262,7 +366,7 @@ test('rendering preserves both sides of every source join and leaves it disconne
     }
     return joins;
   })()`);
-  assert.equal(result.length, 4);
+  assert.equal(result.length, 5);
   assert.ok(result.every(join => join.retained && !join.connected));
 });
 
@@ -270,7 +374,8 @@ test('one global sea-level view includes geological and modern records without l
   const result = run(`({ sources: [...new Set(data[5].seriesRows.map(row => row.source))],
     oldest: data[5].minX, maximum: data[5].maxY,
     seaViews: data.filter(series => series.columnY === 'Sealevel').length })`);
-  assert.deepEqual([...result.sources], ['sea-satellite', 'sea-gauges', 'sea-kopp', 'sea-lambeck', 'sea-miller']);
+  assert.deepEqual([...result.sources], ['sea-satellite', 'sea-gauges', 'sea-kopp', 'sea-lambeck',
+    'sea-spratt-short', 'sea-spratt-long', 'sea-miller']);
   assert.ok(result.oldest < -60000000);
   assert.ok(result.maximum > 100);
   assert.equal(result.seaViews, 1);
@@ -283,11 +388,15 @@ test('sea-level alignment preserves variability and uncertainty while using a 19
     const miller = parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw);
     const kopp = parseKopp2016SeaLevelRows(sourceTables.sealevelKoppRaw);
     const lambeck = parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw);
+    const spratt = parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw);
     const originals = { 'sea-gauges': gp, 'sea-satellite': satellite, 'sea-miller': miller,
-      'sea-kopp': kopp, 'sea-lambeck': lambeck };
+      'sea-kopp': kopp, 'sea-lambeck': lambeck,
+      'sea-spratt-short': spratt.filter(row => row.source === 'sea-spratt-short'),
+      'sea-spratt-long': spratt.filter(row => row.source === 'sea-spratt-long') };
     const offsets = { 'sea-gauges': -seaLevelCalibration.gpReference,
       'sea-satellite': seaLevelCalibration.satelliteOffset, 'sea-miller': -seaLevelCalibration.millerReference,
-      'sea-kopp': -seaLevelCalibration.koppReference, 'sea-lambeck': -seaLevelCalibration.lambeckReference };
+      'sea-kopp': -seaLevelCalibration.koppReference, 'sea-lambeck': -seaLevelCalibration.lambeckReference,
+      'sea-spratt-short': 0, 'sea-spratt-long': 0 };
     const lookup = Object.fromEntries(Object.entries(originals).map(([id,rows])=> {
       const byTime = new Map();
       for (const row of rows) byTime.set(row.time, [...(byTime.get(row.time)||[]), row]);
@@ -340,7 +449,8 @@ test('invalid Kopp rows and absent reference points fail visibly', () => {
     parseGp2014SeaLevelRows(sourceTables.sealevelGpRaw),
     parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw),
     parseKopp2016SeaLevelRows(sourceTables.sealevelKoppRaw).filter(row => row.time !== 0),
-    parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw))`), /1950 reference/);
+    parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw),
+    parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw))`), /1950 reference/);
 });
 
 test('Lambeck uses Table S3 best estimates and its published 2 sigma half-widths', () => {
@@ -363,11 +473,11 @@ test('Lambeck uses Table S3 best estimates and its published 2 sigma half-widths
   assert.equal(Math.min(...raw.map(row => row.sealevel)), -134.28);
   assert.equal(run('seaLevelCalibration.lambeckReference'), 0);
   const retained = run('data[5].seriesRows.filter(row => row.source === "sea-lambeck")');
-  assert.equal(retained.length, 285);
+  assert.equal(retained.length, 220);
   assert.ok(Math.abs(retained[0].time + 2970) < 1e-8);
-  assert.equal(retained.at(-1).time, -34783);
+  assert.equal(retained.at(-1).time, -23947);
   assert.ok(retained.every(row => row.time < -2950));
-  assert.equal(run('data[5].seriesRows.some(row => row.source === "sea-miller" && row.time >= -34783)'), false);
+  assert.equal(run('data[5].seriesRows.some(row => row.source === "sea-miller" && row.time >= -798000)'), false);
 });
 
 test('Lambeck joins keep both definitions visible without fitting endpoints or inventing samples', () => {
@@ -383,10 +493,11 @@ test('Lambeck joins keep both definitions visible without fitting endpoints or i
   assert.ok(Math.abs(recent.age - 2970) < 1e-8);
   assert.ok(Math.abs(recent.jump - 0.46011) < 1e-10);
   assert.equal(recent.connected, false);
-  const ancient = boundaries.find(join => join.older === 'sea-miller');
+  const ancient = boundaries.find(join => join.older === 'sea-spratt-short');
   assert.equal(ancient.newer, 'sea-lambeck');
-  assert.equal(ancient.newerAge, 34783);
-  assert.ok(ancient.age > 34783);
+  assert.equal(ancient.newerAge, 23947);
+  assert.equal(ancient.age, 24000);
+  assert.ok(Math.abs(ancient.jump + 0.94) < 1e-10);
   assert.equal(ancient.connected, false);
 });
 
@@ -400,7 +511,88 @@ test('invalid Lambeck rows and an absent zero-age reference fail visibly', () =>
     parseGp2014SeaLevelRows(sourceTables.sealevelGpRaw),
     parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw),
     parseKopp2016SeaLevelRows(sourceTables.sealevelKoppRaw),
-    parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw).filter(row => row.time !== 0))`), /zero-age reference/);
+    parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw).filter(row => row.time !== 0),
+    parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw))`), /zero-age reference/);
+});
+
+test('Spratt preserves the authors\' composite, published 95% bounds and modern datum', () => {
+  const text = fs.readFileSync('data/sealevel/spratt2016-noaa.txt', 'utf8').replace(/\r\n/g, '\n');
+  assert.equal(require('node:crypto').createHash('sha256').update(text).digest('hex'),
+    '748ddcc489f11b4075e0b6dbf41caf3d641574430e7ec9d30c4ff294f1971f96');
+  const published = text.split('\n').filter(line => /^\d/.test(line)).map(line => line.split(/\s+/).map(Number));
+  const raw = run('parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw)');
+  assert.equal(raw.length, 799);
+  for (const values of published) {
+    const row = raw.find(row => row.time === -values[0] * 1000);
+    const column = values[0] <= 430 ? 1 : 5;
+    assert.equal(row.sealevel, values[column]);
+    assert.equal(row.lower, values[column + 2]);
+    assert.equal(row.upper, values[column + 3]);
+    assert.equal(row.source, values[0] <= 430 ? 'sea-spratt-short' : 'sea-spratt-long');
+    assert.equal(row.band, true);
+    assert.equal(row.uncertainty, '95% bootstrap interval');
+  }
+  assert.equal(raw.find(row => row.time === 0).sealevel, 8.49);
+  assert.equal(raw.find(row => row.time === -5000).sealevel, 0);
+  assert.equal(run('seaLevelCalibration.sprattReference'), 0);
+  assert.equal(run('seaLevelCalibration.sprattReferenceAge'), 5000);
+  assert.equal(raw.find(row => row.time === -136000).sealevel, -123.95);
+  const retained = run('data[5].seriesRows.filter(row => row.source.startsWith("sea-spratt-"))');
+  assert.equal(retained.length, 775);
+  assert.equal(retained.filter(row => row.source === 'sea-spratt-short').length, 407);
+  assert.equal(retained.filter(row => row.source === 'sea-spratt-long').length, 368);
+  assert.equal(retained[0].time, -24000);
+  assert.equal(retained.at(-1).time, -798000);
+  assert.ok(retained.every(row => {
+    const original = raw.find(value => value.time === row.time);
+    return row.sealevel === original.sealevel && row.lower === original.lower && row.upper === original.upper;
+  }));
+});
+
+test('both Spratt component and Miller joins remain marked and disconnected', () => {
+  const boundaries = run(`(() => {
+    const rows = data[5].seriesRows;
+    return rows.flatMap((row,i) => i && sourceSegment(row) !== sourceSegment(rows[i-1]) ?
+      [{older:row.source, newer:rows[i-1].source, age:-row.time, newerAge:-rows[i-1].time,
+        jump:rows[i-1].sealevel-row.sealevel, connected:data[5].canConnectIndices(i-1,i)}] : []);
+  })()`);
+  const component = boundaries.find(join => join.older === 'sea-spratt-long');
+  assert.equal(component.newer, 'sea-spratt-short');
+  assert.equal(component.newerAge, 430000);
+  assert.equal(component.age, 431000);
+  assert.ok(Math.abs(component.jump + 0.01) < 1e-10);
+  assert.equal(component.connected, false);
+  const ancient = boundaries.find(join => join.older === 'sea-miller');
+  assert.equal(ancient.newer, 'sea-spratt-long');
+  assert.equal(ancient.newerAge, 798000);
+  assert.ok(Math.abs(ancient.age - 798259) < 1e-8);
+  assert.ok(Math.abs(ancient.jump + 22.7815) < 1e-10);
+  assert.equal(ancient.connected, false);
+});
+
+test('Spratt rejects changed columns, damaged values, missing ages and lost calibration anchors', () => {
+  const header = run('sourceTables.sealevelSprattRaw.find(line => line.startsWith("age_calkaBP"))');
+  for (const line of ['24 -130 4.38 -134.58 -118.09 -130 5.48 -134.67',
+    '24 -130 4.38 -129 -118.09 -130 5.48 -134.67 -113.97',
+    '24 -130 -4.38 -134.58 -118.09 -130 5.48 -134.67 -113.97',
+    '24 NaN 4.38 -134.58 -118.09 -130 5.48 -134.67 -113.97',
+    '431 NaN NaN NaN NaN -119.41 -14.67 -150.37 -95.74']) {
+    assert.throws(() => run(`parseSpratt2016SeaLevelRows(${JSON.stringify([header, line])})`), /Invalid Spratt/);
+  }
+  assert.throws(() => run('parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw.map(line => line.replace("age_calkaBP", "age_years_BP")))'),
+    /published age, stack and uncertainty columns/);
+  assert.throws(() => run('parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw.filter(line => !line.startsWith("798\\t")))'),
+    /complete 0–798 ka evaluation grid/);
+  for (const time of [-5000, -24000]) {
+    assert.throws(() => run(`buildCombinedSeaLevelTable(
+      parseColoradoSeaLevelRows(sourceTables.sealevelRaw),
+      parseGp2014SeaLevelRows(sourceTables.sealevelGpRaw),
+      parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw),
+      parseKopp2016SeaLevelRows(sourceTables.sealevelKoppRaw),
+      parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw),
+      parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw).filter(row => row.time !== ${time}))`),
+      /5 ka and 24 ka calibration anchors/);
+  }
 });
 
 test('calibration gives matching months equal weight despite different sample counts', () => {
@@ -423,7 +615,7 @@ test('all comparison source boundaries survive thinning and stay disconnected', 
       return {count:joins.length, valid:joins.every(join=>join.retained&&!join.connected)};
     });
   })()`);
-  assert.deepEqual([...result.map(item=>item.count)], [3,4,2,4,1]);
+  assert.deepEqual([...result.map(item=>item.count)], [3,4,2,6,1]);
   assert.ok(result.every(item=>item.valid));
   const gap = run(`(() => {
     const rows = data[5].seriesRows;
@@ -892,6 +1084,8 @@ test('compact mobile tooltips retain dates, source, uncertainty and essential so
     for (const [dataset, source, period, uncertainty] of [
       [0,'giss','',null], [0,'pages','Apr–Mar annual','95% ensemble'],
       [0,'osman','200-year mean','±1σ ensemble'], [0,'snyder','1,000-year grid','95% reconstruction'],
+      [0,'phanda','stage estimate','90% ensemble'],
+      [5,'sea-spratt-short','1,000-year grid','95% bootstrap'], [5,'sea-spratt-long','1,000-year grid','95% bootstrap'],
       [1,'co2-ice','','±1σ measurement'],
       [1,'co2-cencopip','500,000-year mean','95% credible'],
       [5,'sea-kopp','','±1σ posterior'], [5,'sea-lambeck','','±2σ accuracy'],

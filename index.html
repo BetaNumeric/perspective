@@ -31,19 +31,24 @@
       A jump at a join may reflect different methods.</p>
     <details>
     <summary>Global temperature</summary>
-    <p>The temperature curve combines Hansen's estimate before 2 million years BP,
+    <p>The temperature curve uses
+      <a href="https://doi.org/10.1126/science.adk3705">PhanDA's geological-stage estimates</a>
+      before 66 million years BP, Hansen from there to 2 million years BP,
       <a href="https://doi.org/10.1038/nature19798">Snyder's global reconstruction</a>
       from there to 24,000 BP, Osman's 200-year means, PAGES2k's annual reconstruction,
       and GISS monthly observations. Values are relative to 1961–1990.
-      Snyder's 1,000-year grid is smoothed by dating uncertainty; zooming cannot
-      reveal faster changes. Marked breaks identify source changes.</p>
-    <p>GISS is rebased using its 1961–1990 mean. Hansen uses the author's 14 °C
-      reference. Osman's baseline is estimated from its 150–1750 CE overlap
+      Snyder's grid is smoothed by dating uncertainty. PhanDA summarizes stages
+      spanning millions of years; hover shows each age interval. Lines connect
+      published representative ages, and zooming cannot reveal finer changes.</p>
+    <p>GISS is rebased using its 1961–1990 mean. Hansen and PhanDA use Hansen's
+      14 °C reference; this is an assumed common reference for PhanDA, not a fit
+      to Hansen. Osman's baseline is estimated from its 150–1750 CE overlap
       with PAGES2k. Snyder's 0–5,000 BP reference is converted using Osman's mean
       for that same period. These are constant offsets; no variability is stretched or
       compressed to make sources agree. EPICA's Antarctic temperatures are
       excluded from the global curve.</p>
-    <p>Shading shows PAGES2k's 95% ensemble range, Snyder's 95% reconstruction
+    <p>Shading shows PhanDA's 90% ensemble range (5th–95th percentiles),
+      PAGES2k's 95% ensemble range, Snyder's 95% reconstruction
       interval, and Osman's ±1σ ensemble spread
       (one standard deviation). Hover for the bounds. These are different
       uncertainty measures. They do not display uncertainty in the dates or add
@@ -55,13 +60,18 @@
       reconstructs near-surface air temperature. This is a view of broad climate
       history. Earlier glacial lows can be comparable to the last ice age;
       these differing reconstructions cannot rank the coldest period over
-      65 million years or establish precise rates or lags across joins.</p>
+      the full record or establish precise rates or lags across joins.
+      PhanDA stops near 485 million years because suitable older temperature
+      indicators are scarce. Other Cambrian reconstructions disagree and are
+      not spliced into this curve.</p>
     </details>
     <details>
     <summary>Sea level</summary>
-    <p>The curve combines Miller's geological estimates,
+    <p>The curve combines Miller's estimates before 798,000 BP,
+      <a href="https://doi.org/10.5194/cp-12-1079-2016">Spratt &amp; Lisiecki's sea-level stack</a>
+      from there to 24,000 BP,
       <a href="https://doi.org/10.1073/pnas.1411762111">Lambeck's postglacial reconstruction</a>
-      from about 34,800 to 3,000 years ago,
+      from there to about 3,000 BP,
       <a href="https://doi.org/10.1073/pnas.1517056113">Kopp's global reconstruction</a>
       from about 3,000 years ago to 1800 CE, Jevrejeva's tide-gauge reconstruction
       from 1807, and Colorado's satellite observations. Dashed markers and
@@ -69,15 +79,23 @@
     <p>Modern values are relative to the 1950 mean. Satellites are aligned using
       matching months with tide gauges; Kopp's 1950 estimate and Miller's zero-age
       estimate provide separate reference shifts. Lambeck retains its published
-      zero-age reference. Kopp's shading shows ±1σ uncertainty; Lambeck's shows
-      the published ±2σ accuracy range. These ranges exclude alignment uncertainty
+      zero-age reference. Spratt retains its published modern sea-level datum,
+      calibrated at 5,000 BP and the Last Glacial Maximum; its apparent zero-age
+      value can be biased by sediment mixing and is not used to shift the curve.</p>
+    <p>Shading shows Kopp's ±1σ posterior, Lambeck's ±2σ accuracy and Spratt's
+      published 95% bootstrap interval. Spratt uses seven reconstructions through
+      430,000 BP and five thereafter; this change is marked. Its 1,000-year grid
+      does not resolve every short fluctuation. These ranges exclude alignment uncertainty
       and do not capture every model difference. The reconstruction grids do not
       resolve daily or annual changes.</p>
     <p>Lambeck estimates sea level from changes in ice volume; it excludes ocean
       thermal expansion and is not identical to modern total sea level.
       <a href="data/sealevel/lambeck2014-supplement.pdf#page=29">Table S3</a>
-      supplies its original values. Older geological samples remain coarse and
-      use an approximate reference. Local coastal samples are excluded.</p>
+      supplies its original values. Spratt also targets sea-level changes driven
+      mainly by ice volume. Earlier glacial lows can be comparable to the last
+      ice age; differing methods and uncertainties prevent precise rankings.
+      Its join to Miller still differs by about 23 m. Older geological samples
+      remain coarse and use an approximate reference. Local coastal samples are excluded.</p>
     </details>
     <details>
     <summary>Atmospheric CO₂</summary>

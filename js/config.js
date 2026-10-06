@@ -25,6 +25,9 @@ const SOLAR_ALIGNMENT_WINDOW_YEARS = 22; // Approximately two solar cycles near 
 const SOLAR_ALIGNMENT_MIN_DAYS = 15;
 const SOLAR_ALIGNMENT_MIN_MONTHS = 12;
 const ORBITAL_EPOCH_CE = 2000; // ZB18a uses J2000; see Kocken & Zeebe (2026), section 2.1.
+const SPRATT_LGM_AGE_BP = 24000; // Published sea-level calibration; Lambeck supplies younger ages.
+const PHANDA_START_AGE_BP = 66000000; // Use complete pre-Cenozoic stages; Hansen supplies younger ages.
+const DEEP_TEMPERATURE_REFERENCE_C = 14; // Hansen's published 1961–1990 absolute reference.
 
 const SOURCE_INFO = {
   giss: { short: 'GISS', label: 'NASA GISS • monthly observations', cadence: 'month' },
@@ -32,6 +35,7 @@ const SOURCE_INFO = {
   osman: { short: 'Osman', label: 'Osman 2021 • 200-year means • estimated baseline', period: '200-year mean', uncertainty: '±1σ ensemble' },
   snyder: { short: 'Snyder', label: 'Snyder 2016 • global surface reconstruction • estimated baseline', period: '1,000-year grid', uncertainty: '95% reconstruction' },
   hansen: { short: 'Hansen', label: 'Hansen 2013 • coarse global temperature estimate' },
+  phanda: { short: 'PhanDA', label: 'PhanDA 2024 • global air temperature • geological stages', period: 'stage estimate', uncertainty: '90% ensemble' },
   'co2-noaa': { short: 'NOAA', label: 'NOAA • Mauna Loa / Maunakea daily observations', cadence: 'day' },
   'co2-scripps': { short: 'Scripps', label: 'Scripps • Mauna Loa daily observations', cadence: 'day' },
   'co2-ice': { short: 'Ice cores', label: 'Bereiter 2015 • Antarctic ice-core composite', uncertainty: '±1σ measurement' },
@@ -40,6 +44,8 @@ const SOURCE_INFO = {
   'sea-gauges': { short: 'Tide gauges', label: 'Jevrejeva 2014 • monthly global reconstruction', cadence: 'month', uncertainty: 'published error' },
   'sea-kopp': { short: 'Kopp', label: 'Kopp 2016 • global sea-level reconstruction', uncertainty: '±1σ posterior' },
   'sea-lambeck': { short: 'Lambeck', label: 'Lambeck 2014 • ice-volume-equivalent sea level', uncertainty: '±2σ accuracy' },
+  'sea-spratt-short': { short: 'Spratt (7)', label: 'Spratt & Lisiecki 2016 • seven-record sea-level stack', period: '1,000-year grid', uncertainty: '95% bootstrap' },
+  'sea-spratt-long': { short: 'Spratt (5)', label: 'Spratt & Lisiecki 2016 • five-record sea-level stack', period: '1,000-year grid', uncertainty: '95% bootstrap' },
   'sea-miller': { short: 'Miller', label: 'Miller 2024 • geological global sea-level estimate' },
   'solar-satire-m': { short: 'SATIRE-M', label: 'SATIRE-M / PMIP4 • annual proxy reconstruction • adjusted reference', cadence: 'year' },
   'solar-satire-t': { short: 'SATIRE-T', label: 'SATIRE-T / PMIP4 • annual sunspot reconstruction • adjusted reference', cadence: 'year' },

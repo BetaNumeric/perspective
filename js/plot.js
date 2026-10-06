@@ -344,7 +344,8 @@ class Data {
       const newer = this.seriesRows[i - 1];
       const older = this.seriesRows[i];
       if (sourceSegment(newer) === sourceSegment(older)) continue;
-      const transitionTime = (this.dataX[i - 1] + this.dataX[i]) / 2;
+      const transitionTime = Number.isFinite(older.joinTime) && older.joinTime >= older.time && older.joinTime <= newer.time
+        ? older.joinTime : (this.dataX[i - 1] + this.dataX[i]) / 2;
       const transitionX = width - oneYear * (transitionTime - this.BP);
       if (transitionX < shift || transitionX > width) continue;
       stroke(180, 110);
@@ -375,8 +376,12 @@ class Data {
   }
 
   nearestVisibleIndex(timeValue, renderDistance) {
-    if (renderDistance <= 0 || timeValue > this.dataX[0]
-      || timeValue < this.dataX[renderDistance - 1]) return -1;
+    if (renderDistance <= 0 || !Number.isFinite(timeValue)) return -1;
+    const newest = this.dataX[0], oldest = this.dataX[renderDistance - 1];
+    // Screen-to-time conversion can round an endpoint by a few floating-point steps.
+    const tolerance = 4 * Number.EPSILON * Math.max(1, Math.abs(timeValue), Math.abs(newest), Math.abs(oldest));
+    if (timeValue > newest + tolerance || timeValue < oldest - tolerance) return -1;
+    timeValue = Math.max(oldest, Math.min(newest, timeValue));
     let low = 0;
     let high = renderDistance - 1;
     while (low < high) {

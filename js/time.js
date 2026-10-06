@@ -1,4 +1,8 @@
 function sampleTimeLabel(row) {
+  if (Number.isFinite(row.ageYoungerMa) && Number.isFinite(row.ageOlderMa)) {
+    const ageLabel = value => value.toFixed(2).replace(/\.?0+$/, '');
+    return ageLabel(row.ageYoungerMa) + '–' + ageLabel(row.ageOlderMa) + ' million years BP';
+  }
   const calendarYear = row.time + 1950;
   const cadence = SOURCE_INFO[row.source]?.cadence;
   if (row.sampleDate) return row.sampleDate;

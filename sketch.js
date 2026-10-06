@@ -20,6 +20,7 @@ function preload() {
   sourceTables.zeebeOrbitalRaw = loadSourceLines('data/orbit/zeebe2019orbital.txt');
 
   // Temperature (oldest -> newest)
+  sourceTables.phanDaTempRaw = loadSourceLines('data/temperature/phanda2024-percentiles.csv');
   sourceTables.hansenTempRaw = loadSourceLines('data/temperature/Table.txt');
   sourceTables.snyderTempRaw = loadSourceLines('data/temperature/snyder2016-gast.csv');
   sourceTables.osmanTempRaw = loadSourceLines('data/temperature/osman2021-gmst.csv');
@@ -43,6 +44,7 @@ function preload() {
 
   // Sea Level (oldest -> newest)
   sourceTables.sealevelMillerRaw = loadSourceLines('data/sealevel/miller2024-sealevel.txt');
+  sourceTables.sealevelSprattRaw = loadSourceLines('data/sealevel/spratt2016-noaa.txt');
   sourceTables.sealevelLambeckRaw = loadSourceLines('data/sealevel/lambeck2014-esl.csv');
   sourceTables.sealevelKoppRaw = loadSourceLines('data/sealevel/kopp2016-global-posterior.csv');
   sourceTables.sealevelGpRaw = loadSourceLines('data/sealevel/gslGPChange2014.txt');
@@ -97,7 +99,8 @@ function initializeView() {
     parseNeukomTemperatureRows(sourceTables.neukomTempRaw),
     parseOsmanTemperatureRows(sourceTables.osmanTempRaw),
     parseSnyderTemperatureRows(sourceTables.snyderTempRaw),
-    parseHansenTemperatureRows(sourceTables.hansenTempRaw));
+    parseHansenTemperatureRows(sourceTables.hansenTempRaw),
+    parsePhanDaTemperatureRows(sourceTables.phanDaTempRaw));
   sourceTables.solarBase = buildTimeValueTable(
     parsePmipSolarRows(sourceTables.solarIrradiance),
     'irradiance',
@@ -114,7 +117,8 @@ function initializeView() {
     parseGp2014SeaLevelRows(sourceTables.sealevelGpRaw),
     parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw),
     parseKopp2016SeaLevelRows(sourceTables.sealevelKoppRaw),
-    parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw));
+    parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw),
+    parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw));
 
   createTimelineEvents();
 
