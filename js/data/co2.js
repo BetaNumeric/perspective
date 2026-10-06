@@ -65,12 +65,38 @@ function parseCencopipCo2Rows(rawLines) {
     const [lower, co2, upper] = [logLower, logMedian, logUpper].map(Math.exp);
     if (![lower, co2, upper].every(Number.isFinite) || lower <= 0 || lower > co2 || co2 > upper) continue;
     rows.push({
-      time: -ageMa * 1000000, co2, lower, upper, source: 'co2-cencopip', band: true,
+      time: -ageMa * 1000000, ageMa, co2, lower, upper, source: 'co2-cencopip', band: true,
       uncertainty: '95% credible interval for the 500,000-year mean',
       note: 'Bin midpoint; line connects 500,000-year averages'
     });
   }
   return sortRowsByTimeDesc(rows);
+}
+
+function parseFosterCo2Rows(rawLines) {
+  const header = 'age_ma_bp,co2_mode_ppm,co2_lower95_ppm,co2_lower68_ppm,co2_upper68_ppm,co2_upper95_ppm';
+  if (rawLines?.[0]?.trim() !== header) throw new Error('Foster requires the published mode and 68%/95% limits');
+  const rows = [];
+  for (const raw of rawLines.slice(1)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const tokens = line.split(',');
+    const values = tokens.map(Number);
+    const [ageMa, co2, lower95, lower, upper, upper95] = values;
+    if (values.length !== 6 || tokens.some(token => !token.trim()) || !values.every(Number.isFinite)
+      || lower <= 0 || !(lower95 <= lower && lower <= co2 && co2 <= upper && upper <= upper95)) {
+      throw new Error('Invalid Foster CO₂ mode or confidence limits');
+    }
+    // LOESS can give negative 95% lower limits. Display the published positive
+    // 68% interval, without clipping or relabelling the original uncertainty.
+    rows.push({ time: -ageMa * 1000000, ageMa, co2, lower, upper, band: true,
+      source: 'co2-foster', uncertainty: '68% LOESS confidence interval' });
+  }
+  sortRowsByTimeDesc(rows);
+  if (rows.length !== 840 || rows.some((row, index) => Math.abs(row.ageMa - (0.0039 + index * 0.5)) > 1e-10)) {
+    throw new Error('Foster requires its complete 0.0039–419.5039 Ma evaluation grid');
+  }
+  return rows;
 }
 
 function parseScrippsDailyCo2Rows(rawLines) {
@@ -114,9 +140,12 @@ function buildCombinedCo2Table() {
   const oldestModern = modern.length ? Math.min(...modern.map(row => row.time)) : Infinity;
   const reconstruction = parseCencopipCo2Rows(sourceTables.co2CencopipRaw)
     .filter(row => row.time < oldestIce);
+  const olderFit = parseFosterCo2Rows(sourceTables.co2FosterRaw)
+    .filter(row => row.time <= -FOSTER_START_AGE_BP);
+  olderFit[0].joinTime = -FOSTER_START_AGE_BP;
   // Use the published synthesis for deep time. Prefer ice-core samples over
   // overlapping bins, without adding an endpoint or connecting across sources.
   return buildTimeValueTable(sortRowsByTimeDesc([
-    ...modern, ...ice.filter(row => row.time < oldestModern), ...reconstruction
+    ...modern, ...ice.filter(row => row.time < oldestModern), ...reconstruction, ...olderFit
   ]), 'co2', 'CO2');
 }

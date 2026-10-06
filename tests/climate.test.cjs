@@ -375,8 +375,8 @@ test('one global sea-level view includes geological and modern records without l
     oldest: data[5].minX, maximum: data[5].maxY,
     seaViews: data.filter(series => series.columnY === 'Sealevel').length })`);
   assert.deepEqual([...result.sources], ['sea-satellite', 'sea-gauges', 'sea-kopp', 'sea-lambeck',
-    'sea-spratt-short', 'sea-spratt-long', 'sea-miller']);
-  assert.ok(result.oldest < -60000000);
+    'sea-spratt-short', 'sea-spratt-long', 'sea-miller', 'sea-marcilly']);
+  assert.equal(result.oldest, -520000000);
   assert.ok(result.maximum > 100);
   assert.equal(result.seaViews, 1);
 });
@@ -389,14 +389,15 @@ test('sea-level alignment preserves variability and uncertainty while using a 19
     const kopp = parseKopp2016SeaLevelRows(sourceTables.sealevelKoppRaw);
     const lambeck = parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw);
     const spratt = parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw);
+    const marcilly = parseMarcillySeaLevelRows(sourceTables.sealevelMarcillyRaw);
     const originals = { 'sea-gauges': gp, 'sea-satellite': satellite, 'sea-miller': miller,
-      'sea-kopp': kopp, 'sea-lambeck': lambeck,
+      'sea-kopp': kopp, 'sea-lambeck': lambeck, 'sea-marcilly': marcilly,
       'sea-spratt-short': spratt.filter(row => row.source === 'sea-spratt-short'),
       'sea-spratt-long': spratt.filter(row => row.source === 'sea-spratt-long') };
     const offsets = { 'sea-gauges': -seaLevelCalibration.gpReference,
       'sea-satellite': seaLevelCalibration.satelliteOffset, 'sea-miller': -seaLevelCalibration.millerReference,
       'sea-kopp': -seaLevelCalibration.koppReference, 'sea-lambeck': -seaLevelCalibration.lambeckReference,
-      'sea-spratt-short': 0, 'sea-spratt-long': 0 };
+      'sea-spratt-short': 0, 'sea-spratt-long': 0, 'sea-marcilly': 0 };
     const lookup = Object.fromEntries(Object.entries(originals).map(([id,rows])=> {
       const byTime = new Map();
       for (const row of rows) byTime.set(row.time, [...(byTime.get(row.time)||[]), row]);
@@ -450,7 +451,8 @@ test('invalid Kopp rows and absent reference points fail visibly', () => {
     parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw),
     parseKopp2016SeaLevelRows(sourceTables.sealevelKoppRaw).filter(row => row.time !== 0),
     parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw),
-    parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw))`), /1950 reference/);
+    parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw),
+    parseMarcillySeaLevelRows(sourceTables.sealevelMarcillyRaw))`), /1950 reference/);
 });
 
 test('Lambeck uses Table S3 best estimates and its published 2 sigma half-widths', () => {
@@ -512,7 +514,8 @@ test('invalid Lambeck rows and an absent zero-age reference fail visibly', () =>
     parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw),
     parseKopp2016SeaLevelRows(sourceTables.sealevelKoppRaw),
     parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw).filter(row => row.time !== 0),
-    parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw))`), /zero-age reference/);
+    parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw),
+    parseMarcillySeaLevelRows(sourceTables.sealevelMarcillyRaw))`), /zero-age reference/);
 });
 
 test('Spratt preserves the authors\' composite, published 95% bounds and modern datum', () => {
@@ -590,7 +593,8 @@ test('Spratt rejects changed columns, damaged values, missing ages and lost cali
       parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw),
       parseKopp2016SeaLevelRows(sourceTables.sealevelKoppRaw),
       parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw),
-      parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw).filter(row => row.time !== ${time}))`),
+      parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw).filter(row => row.time !== ${time}),
+      parseMarcillySeaLevelRows(sourceTables.sealevelMarcillyRaw))`),
       /5 ka and 24 ka calibration anchors/);
   }
 });
@@ -615,7 +619,7 @@ test('all comparison source boundaries survive thinning and stay disconnected', 
       return {count:joins.length, valid:joins.every(join=>join.retained&&!join.connected)};
     });
   })()`);
-  assert.deepEqual([...result.map(item=>item.count)], [3,4,2,6,1]);
+  assert.deepEqual([...result.map(item=>item.count)], [4,4,2,7,1]);
   assert.ok(result.every(item=>item.valid));
   const gap = run(`(() => {
     const rows = data[5].seriesRows;
@@ -649,16 +653,103 @@ test('deep-time CO2 uses the original published median and bounds on the ppm sca
     const series = data[1];
     const firstBin = series.seriesRows.findIndex(row => row.source === 'co2-cencopip');
     return { sources:[...new Set(series.seriesRows.map(row=>row.source))],
-      connected:series.seriesRows.slice(firstBin+1).every((row,i)=>series.canConnectIndices(firstBin+i,firstBin+i+1)),
+      connected:series.seriesRows.slice(firstBin+1,firstBin+130).every((row,i)=>series.canConnectIndices(firstBin+i,firstBin+i+1)),
       joinConnected:series.canConnectIndices(firstBin-1,firstBin),
       oldestIce:series.seriesRows[firstBin-1].time,
       measured:data[1].seriesRows.filter(row=>row.source==='co2-noaa').every(row=>row.co2===noaa.get(row.time)) };
   })()`);
-  assert.deepEqual([...result.sources], ['co2-noaa','co2-scripps','co2-ice','co2-cencopip']);
+  assert.deepEqual([...result.sources], ['co2-noaa','co2-scripps','co2-ice','co2-cencopip','co2-foster']);
   assert.equal(result.connected, true);
   assert.equal(result.joinConnected, false);
   assert.ok(result.oldestIce > bins[0].time && result.oldestIce < -805668);
   assert.equal(result.measured, true);
+});
+
+test('Foster extends CO2 with unchanged modes and positive published 68% bounds', () => {
+  const original = new Map(fs.readFileSync('data/co2/foster2017-loess.csv', 'utf8').trim()
+    .split(/\r?\n/).slice(1).map(line => {
+      const [age, mode, , lower, upper] = line.split(',').map(Number);
+      return [-age * 1e6, [mode, lower, upper]];
+    }));
+  const rows = run('data[1].seriesRows.filter(row => row.source === "co2-foster")');
+  assert.equal(rows.length, 708);
+  assert.equal(rows[0].time, -66003900);
+  assert.equal(rows.at(-1).time, -419503900);
+  assert.equal(run('data[1].minX'), -419503900);
+  for (const row of rows) {
+    assert.deepEqual([row.co2, row.lower, row.upper], original.get(row.time));
+    assert.ok(row.band && row.lower > 0 && row.uncertainty.includes('68%'));
+  }
+  assert.equal(run('sampleTimeLabel(data[1].seriesRows.find(row=>row.source==="co2-foster"))'),
+    '66.0039 million years BP');
+  const boundaries = run(`(() => {
+    const series=data[1]; const i=series.seriesRows.findIndex(row=>row.source==='co2-foster');
+    setZoom(450e6 * 1000 / (width-shift)); oneYear=-1000/scrollValue; series.draw();
+    return {connected:series.canConnectIndices(i-1,i), older:series.seriesRows[i],
+      newer:series.seriesRows[i-1], min:series.localMinY, max:series.localMaxY};
+  })()`);
+  assert.equal(boundaries.connected, false);
+  assert.equal(boundaries.older.joinTime, -66000000);
+  assert.equal(boundaries.newer.source, 'co2-cencopip');
+  assert.ok(boundaries.older.upper < boundaries.newer.lower);
+  assert.ok(rows.every(row=>row.lower >= boundaries.min && row.upper <= boundaries.max));
+});
+
+test('corrected Marcilly column extends sea level without fitting or inventing a band', () => {
+  const bytes = fs.readFileSync('data/sealevel/marcilly2024-modern-land.csv');
+  assert.equal(require('node:crypto').createHash('sha256').update(bytes.toString().replaceAll('\r\n','\n')).digest('hex'),
+    'f296c85377776f26863d27538a3fb6099b6512706802dce6e14822c5340dcbbd');
+  const original = new Map(bytes.toString().trim().split(/\r?\n/).slice(1)
+    .map(line=>line.split(',').map(Number)).map(([age,value])=>[-age*1e6,value]));
+  const rows = run('data[5].seriesRows.filter(row=>row.source==="sea-marcilly")');
+  assert.equal(rows.length,46);
+  assert.equal(rows[0].time,-70000000);
+  assert.equal(rows.at(-1).time,-520000000);
+  assert.ok(rows.every(row=>row.sealevel===original.get(row.time) && !row.band && row.lower===undefined && row.upper===undefined));
+  assert.equal(run('sampleTimeLabel(data[5].seriesRows.find(row=>row.source==="sea-marcilly"))'), '70 million years BP');
+  const join = run(`(() => {
+    const series=data[5], i=series.seriesRows.findIndex(row=>row.source==='sea-marcilly');
+    return {older:series.seriesRows[i],newer:series.seriesRows[i-1],connected:series.canConnectIndices(i-1,i)};
+  })()`);
+  assert.equal(join.connected,false);
+  assert.equal(join.newer.source,'sea-miller');
+  assert.ok(Math.abs(join.newer.time+66610889)<1e-6);
+  assert.ok(Math.abs(join.older.sealevel-join.newer.sealevel+5.2537)<1e-8);
+});
+
+test('older source-join labels remain visible in crowded mobile views', () => {
+  const saved = {width:context.width,height:context.height,text:context.text,line:context.line};
+  const labels=[],markers=[];
+  context.width=375;context.height=844;
+  context.text=value=>labels.push(String(value));
+  context.line=(...args)=>markers.push(args);
+  try {
+    for (const [dataset,years,label] of [[1,450e6,'Foster / CenCO₂PIP'],[5,550e6,'Marcilly / Miller']]) {
+      labels.length=0;markers.length=0;
+      run(`setZoom(${years}*1000/(width-shift));oneYear=-1000/scrollValue;
+        data[${dataset}].rectY=panelTargetY(1);data[${dataset}].rectH=height/DATA_PANEL_HEIGHT_DIVISOR;
+        data[${dataset}].drawSourceJoins(Math.min(data[${dataset}].dataX.length,data[${dataset}].visiblePointCount()+1));`);
+      assert.ok(labels.includes(label));
+      assert.ok(markers.length>7 && markers.every(([x,,endX])=>x===endX));
+    }
+  } finally {Object.assign(context,saved);}
+});
+
+test('historical extension parsers reject changed columns, lost dates and damaged values', () => {
+  for (const expression of [
+    'sourceTables.co2FosterRaw.map(line=>line.replace("co2_mode_ppm","co2_median_ppm"))',
+    'sourceTables.co2FosterRaw.filter(line=>!line.startsWith("419.503"))',
+    '[...sourceTables.co2FosterRaw,sourceTables.co2FosterRaw[1]]',
+    'sourceTables.co2FosterRaw.map((line,index)=>index===1?line.replace(/,[^,]+/,",-1"):line)',
+    'sourceTables.co2FosterRaw.map((line,index)=>index===1?line.replace(/^[^,]+/,"0"):line)'
+  ]) assert.throws(()=>run(`parseFosterCo2Rows(${expression})`), /Foster/);
+  for (const expression of [
+    'sourceTables.sealevelMarcillyRaw.map(line=>line.replace("modern_land_sealevel_m","continental_sealevel_m"))',
+    'sourceTables.sealevelMarcillyRaw.filter(line=>!line.startsWith("520,"))',
+    '[...sourceTables.sealevelMarcillyRaw,sourceTables.sealevelMarcillyRaw[1]]',
+    'sourceTables.sealevelMarcillyRaw.map(line=>line==="0,0.00"?"0,348.17":line)',
+    'sourceTables.sealevelMarcillyRaw.map(line=>line==="70,138.84"?"70,nan":line)'
+  ]) assert.throws(()=>run(`parseMarcillySeaLevelRows(${expression})`), /Marcilly/);
 });
 
 test('modern CO2 connects available observations without adding missing samples', () => {

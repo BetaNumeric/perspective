@@ -27,6 +27,7 @@ const SOLAR_ALIGNMENT_MIN_MONTHS = 12;
 const ORBITAL_EPOCH_CE = 2000; // ZB18a uses J2000; see Kocken & Zeebe (2026), section 2.1.
 const SPRATT_LGM_AGE_BP = 24000; // Published sea-level calibration; Lambeck supplies younger ages.
 const PHANDA_START_AGE_BP = 66000000; // Use complete pre-Cenozoic stages; Hansen supplies younger ages.
+const FOSTER_START_AGE_BP = 66000000; // CenCO₂PIP supplies the Cenozoic; keep Foster's older fit.
 const DEEP_TEMPERATURE_REFERENCE_C = 14; // Hansen's published 1961–1990 absolute reference.
 
 const SOURCE_INFO = {
@@ -40,6 +41,7 @@ const SOURCE_INFO = {
   'co2-scripps': { short: 'Scripps', label: 'Scripps • Mauna Loa daily observations', cadence: 'day' },
   'co2-ice': { short: 'Ice cores', label: 'Bereiter 2015 • Antarctic ice-core composite', uncertainty: '±1σ measurement' },
   'co2-cencopip': { short: 'CenCO₂PIP', label: 'CenCO₂PIP 2023 • 500,000-year means • median reconstruction', period: '500,000-year mean', uncertainty: '95% credible' },
+  'co2-foster': { short: 'Foster', label: 'Foster et al. 2017 • smoothed proxy reconstruction • most likely CO₂', period: 'smoothed trend', uncertainty: '68% fit range' },
   'sea-satellite': { short: 'Satellites', label: 'Colorado • satellite sea level • overlap-aligned', cadence: 'day' },
   'sea-gauges': { short: 'Tide gauges', label: 'Jevrejeva 2014 • monthly global reconstruction', cadence: 'month', uncertainty: 'published error' },
   'sea-kopp': { short: 'Kopp', label: 'Kopp 2016 • global sea-level reconstruction', uncertainty: '±1σ posterior' },
@@ -47,6 +49,7 @@ const SOURCE_INFO = {
   'sea-spratt-short': { short: 'Spratt (7)', label: 'Spratt & Lisiecki 2016 • seven-record sea-level stack', period: '1,000-year grid', uncertainty: '95% bootstrap' },
   'sea-spratt-long': { short: 'Spratt (5)', label: 'Spratt & Lisiecki 2016 • five-record sea-level stack', period: '1,000-year grid', uncertainty: '95% bootstrap' },
   'sea-miller': { short: 'Miller', label: 'Miller 2024 • geological global sea-level estimate' },
+  'sea-marcilly': { short: 'Marcilly', label: 'Marcilly et al. • corrected 2024 • modern-land sea level', period: '10-million-year grid' },
   'solar-satire-m': { short: 'SATIRE-M', label: 'SATIRE-M / PMIP4 • annual proxy reconstruction • adjusted reference', cadence: 'year' },
   'solar-satire-t': { short: 'SATIRE-T', label: 'SATIRE-T / PMIP4 • annual sunspot reconstruction • adjusted reference', cadence: 'year' },
   'solar-cmip6': { short: 'CMIP6', label: 'CMIP6 • SATIRE/NRL model composite • adjusted reference', cadence: 'day' },

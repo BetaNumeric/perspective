@@ -156,7 +156,32 @@ function parseSpratt2016SeaLevelRows(rawLines) {
   return rows;
 }
 
-function buildCombinedSeaLevelTable(coloradoRows, gpRows, millerRows, koppRows, lambeckRows, sprattRows) {
+function parseMarcillySeaLevelRows(rawLines) {
+  if (rawLines?.[0]?.trim() !== 'age_ma_bp,modern_land_sealevel_m') {
+    throw new Error('Marcilly requires the corrected modern-land sea-level column');
+  }
+  const rows = [];
+  for (const raw of rawLines.slice(1)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const tokens = line.split(',');
+    const values = tokens.map(Number);
+    if (values.length !== 2 || tokens.some(token => !token.trim()) || !values.every(Number.isFinite)) {
+      throw new Error('Invalid corrected Marcilly sea-level row');
+    }
+    const [ageMa, sealevel] = values;
+    rows.push({ time: -ageMa * 1000000, ageMa, sealevel, source: 'sea-marcilly',
+      note: 'Published modern-land reference; uncertainty not quantified here' });
+  }
+  sortRowsByTimeDesc(rows);
+  if (rows.length !== 53 || rows.some((row, index) => row.ageMa !== index * 10)
+    || rows[0].sealevel !== 0) {
+    throw new Error('Marcilly requires its complete 0–520 Ma grid and published zero-age reference');
+  }
+  return rows;
+}
+
+function buildCombinedSeaLevelTable(coloradoRows, gpRows, millerRows, koppRows, lambeckRows, sprattRows, marcillyRows) {
   // Modern observations have arbitrary datums. Anchor the tide-gauge curve to
   // its 1950 mean, then align satellite observations using matching months.
   const reference = gpRows.filter(row => row.time >= 0 && row.time < 1);
@@ -198,8 +223,13 @@ function buildCombinedSeaLevelTable(coloradoRows, gpRows, millerRows, koppRows, 
   if (!olderLambeck.length) throw new Error('Lambeck must supply the postglacial sea-level segment');
   const olderSpratt = sprattRows.filter(row => row.time <= -SPRATT_LGM_AGE_BP);
   const oldestSpratt = olderSpratt.at(-1).time;
+  const olderMiller = geological.filter(row => row.time < oldestSpratt);
+  const oldestMiller = olderMiller.at(-1).time;
+  // Marcilly's modern-land column is already relative to present. Its alternative
+  // continental columns are different definitions, not uncertainty bounds.
+  const olderMarcilly = marcillyRows.filter(row => row.time < oldestMiller);
   return buildTimeValueTable(sortRowsByTimeDesc([
     ...satellites, ...olderGp, ...olderKopp, ...olderLambeck, ...olderSpratt,
-    ...geological.filter(row => row.time < oldestSpratt)
+    ...olderMiller, ...olderMarcilly
   ]), 'sealevel', 'Sealevel');
 }

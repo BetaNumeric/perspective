@@ -334,9 +334,9 @@ class Data {
   }
 
   drawSourceJoins(renderDistance) {
-    // Omit join labels that collide when several transitions share a few pixels.
+    // Older visible joins take priority when recent transitions share a few pixels.
     const labelRightLimit = width - 8;
-    let nextLabelRight = labelRightLimit;
+    const occupiedLabels = [];
     const labels = [];
     textSize(max(11, min(14, height / TEXT_SIZE_DIVISOR_SMALL)));
     strokeWeight(1);
@@ -359,18 +359,18 @@ class Data {
         (SOURCE_INFO[sourceSegment(newer)]?.short || sourceSegment(newer));
       labels.push({ label, x: transitionX });
     }
-    labels.sort((a, b) => b.x - a.x);
+    labels.sort((a, b) => a.x - b.x);
     for (const { label, x } of labels) {
       const labelRight = min(x - 4, labelRightLimit);
       const labelLeft = labelRight - textWidth(label);
-      if (labelRight <= nextLabelRight && labelLeft >= shift) {
+      if (labelLeft >= shift && occupiedLabels.every(([left, right]) => labelLeft > right + 8 || labelRight < left - 8)) {
         noStroke();
         fill(0, 32, 64, BACKGROUND_ALPHA_HIGH);
         rect(labelLeft - 2, this.rectY + this.rectH - 7 - height / TEXT_SIZE_DIVISOR_TINY,
           labelRight - labelLeft + 4, height / TEXT_SIZE_DIVISOR_TINY + 6);
         fill(220);
         text(label, labelRight, this.rectY + this.rectH - 4);
-        nextLabelRight = labelLeft - 8;
+        occupiedLabels.push([labelLeft, labelRight]);
       }
     }
   }

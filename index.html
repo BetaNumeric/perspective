@@ -25,177 +25,155 @@
       <form method="dialog"><button class="info-close" type="submit" aria-label="Close information" title="Close">×</button></form>
     </header>
     <div class="info-content">
-    <p>Choose a dataset above to compare with global temperature below. Scroll to
-      zoom; time stays linear at every zoom. Hover to read values, dates and sources.</p>
-    <p>Dashed markers and breaks show source joins. Bands show reported uncertainty.
-      A jump at a join may reflect different methods.</p>
-    <details>
-    <summary>Global temperature</summary>
-    <p>The temperature curve uses
-      <a href="https://doi.org/10.1126/science.adk3705">PhanDA's geological-stage estimates</a>
-      before 66 million years BP, Hansen from there to 2 million years BP,
-      <a href="https://doi.org/10.1038/nature19798">Snyder's global reconstruction</a>
-      from there to 24,000 BP, Osman's 200-year means, PAGES2k's annual reconstruction,
-      and GISS monthly observations. Values are relative to 1961–1990.
-      Snyder's grid is smoothed by dating uncertainty. PhanDA summarizes stages
-      spanning millions of years; hover shows each age interval. Lines connect
-      published representative ages, and zooming cannot reveal finer changes.</p>
-    <p>GISS is rebased using its 1961–1990 mean. Hansen and PhanDA use Hansen's
-      14 °C reference; this is an assumed common reference for PhanDA, not a fit
-      to Hansen. Osman's baseline is estimated from its 150–1750 CE overlap
-      with PAGES2k. Snyder's 0–5,000 BP reference is converted using Osman's mean
-      for that same period. These are constant offsets; no variability is stretched or
-      compressed to make sources agree. EPICA's Antarctic temperatures are
-      excluded from the global curve.</p>
-    <p>Shading shows PhanDA's 90% ensemble range (5th–95th percentiles),
-      PAGES2k's 95% ensemble range, Snyder's 95% reconstruction
-      interval, and Osman's ±1σ ensemble spread
-      (one standard deviation). Hover for the bounds. These are different
-      uncertainty measures. They do not display uncertainty in the dates or add
-      uncertainty for baseline alignment and other differences between sources. GISS and Hansen
-      have no uncertainty band in this view; that does not mean their values
-      are exact. Ancient records cannot resolve modern monthly changes.</p>
-    <p>The sources use different temperature definitions and methods. For example,
-      GISS blends land air temperatures and sea surface temperatures; Osman
-      reconstructs near-surface air temperature. This is a view of broad climate
-      history. Earlier glacial lows can be comparable to the last ice age;
-      these differing reconstructions cannot rank the coldest period over
-      the full record or establish precise rates or lags across joins.
-      PhanDA stops near 485 million years because suitable older temperature
-      indicators are scarce. Other Cambrian reconstructions disagree and are
-      not spliced into this curve.</p>
-    </details>
-    <details>
-    <summary>Sea level</summary>
-    <p>The curve combines Miller's estimates before 798,000 BP,
-      <a href="https://doi.org/10.5194/cp-12-1079-2016">Spratt &amp; Lisiecki's sea-level stack</a>
-      from there to 24,000 BP,
-      <a href="https://doi.org/10.1073/pnas.1411762111">Lambeck's postglacial reconstruction</a>
-      from there to about 3,000 BP,
-      <a href="https://doi.org/10.1073/pnas.1517056113">Kopp's global reconstruction</a>
-      from about 3,000 years ago to 1800 CE, Jevrejeva's tide-gauge reconstruction
-      from 1807, and Colorado's satellite observations. Dashed markers and
-      line breaks identify source changes; their endpoints are not forced to meet.</p>
-    <p>Modern values are relative to the 1950 mean. Satellites are aligned using
-      matching months with tide gauges; Kopp's 1950 estimate and Miller's zero-age
-      estimate provide separate reference shifts. Lambeck retains its published
-      zero-age reference. Spratt retains its published modern sea-level datum,
-      calibrated at 5,000 BP and the Last Glacial Maximum; its apparent zero-age
-      value can be biased by sediment mixing and is not used to shift the curve.</p>
-    <p>Shading shows Kopp's ±1σ posterior, Lambeck's ±2σ accuracy and Spratt's
-      published 95% bootstrap interval. Spratt uses seven reconstructions through
-      430,000 BP and five thereafter; this change is marked. Its 1,000-year grid
-      does not resolve every short fluctuation. These ranges exclude alignment uncertainty
-      and do not capture every model difference. The reconstruction grids do not
-      resolve daily or annual changes.</p>
-    <p>Lambeck estimates sea level from changes in ice volume; it excludes ocean
-      thermal expansion and is not identical to modern total sea level.
-      <a href="data/sealevel/lambeck2014-supplement.pdf#page=29">Table S3</a>
-      supplies its original values. Spratt also targets sea-level changes driven
-      mainly by ice volume. Earlier glacial lows can be comparable to the last
-      ice age; differing methods and uncertainties prevent precise rankings.
-      Its join to Miller still differs by about 23 m. Older geological samples
-      remain coarse and use an approximate reference. Local coastal samples are excluded.</p>
-    </details>
-    <details>
-    <summary>Atmospheric CO₂</summary>
-    <p>Daily station observations continue the published Antarctic
-      ice-core composite. Lines connect available samples within each source,
-      including days with no observation in between; no missing measurements
-      are added. The source joins remain marked and disconnected.</p>
-    <p>Ice-core shading shows the published ±1σ measurement uncertainty
-      (one standard deviation). It does not include uncertainty in the gas ages
-      or all changes blurred by the ice-core record. Modern station observations
-      have no uncertainty band in this view.</p>
-    <p>For deep time, the
-      <a href="https://doi.org/10.1126/science.adi5177">CenCO₂PIP reconstruction</a>
-      combines multiple proxy methods into one broad trend. We use the authors'
-      <a href="https://zenodo.org/records/10471529">January 2024 update</a>:
-      the line shows the median estimate of CO₂ averaged over 500,000 years;
-      the shaded area shows its 95% credible interval. This is uncertainty in
-      the estimated average, not the spread of every measurement or the range
-      of short-term changes. Hover for the bounds and bin midpoint. Zooming in
-      cannot reveal changes finer than these averages. Compare broad trends,
-      not precise peaks or lags against more finely sampled temperature.
-      The original proxy files remain available for reference in
-      <a href="data/SOURCES.md">the source notes</a>.
-      <a href="data/co2/cencopip2023-LICENSE.txt">Dataset license</a>.</p>
-    </details>
-    <details>
-    <summary>Solar irradiance</summary>
-    <p>The older PMIP4 file already combines proxy and sunspot
-      reconstructions with the CMIP6 solar model composite. NNL continues it
-      from 1874; TSIS satellite observations begin in 2018. These source
-      changes are marked. All values are at a fixed Sun–Earth distance of
-      1 AU, so orbital distance changes are excluded.</p>
-    <p>Historical models receive constant reference shifts; TSIS keeps its
-      measured level. The shifts compare the same dates, using a median of
-      monthly differences to reduce the influence of exceptional months.
-      The older join uses roughly two solar cycles near the transition.
-      Model trends and cycle amplitudes can still disagree; a shift does
-      not make these one homogeneous record.</p>
-    <p>When more than 200 years are visible, solar data appear as annual means
-      to match the older annual record. Zooming in restores the daily dates
-      with 50-day means from 1850 onward. Tooltips identify the averaging period,
-      partial years and their coverage. No average blends
-      source joins or fills missing days. Unusual valid readings are retained,
-      and provisional readings stay labelled. Typical solar-cycle changes
-      are around 0.1% of the roughly 1361 W/m² total: automatic vertical
-      scaling makes small changes appear large.</p>
-    </details>
-    <details>
-    <summary>Volcanoes</summary>
-    <p>The published HolVol / eVolv2k / CMIP6 combination is
-      retained, with its component changes marked. Values are annual global
-      aerosol optical depth, rather than eruption counts.</p>
-    </details>
-    <details>
-    <summary>Orbital eccentricity</summary>
-    <p>Published samples are 1,600 years apart, with the latest at
-      2000 CE, the calculation's reference date. No daily record is
-      available here: zoom out if the panel is empty. Data older than 58 million
-      years are omitted because the provider warns that orbital phase is
-      unconstrained there.</p>
-    </details>
-    <details>
-    <summary>World population</summary>
-    <p>Historical estimates run through 2023. Values from
-      2024 are projections and appear as dashed lines, even for years that
-      have already passed. Only years through the current calendar year are shown.
-      Lines connect annual values within each segment; they do not imply daily
-      measurements or extend beyond the newest sample. Population is not included
-      in the automatic observation updates.</p>
-    </details>
-    <details>
-    <summary>Interpreting correlations</summary>
-    <p>Visual agreement helps you ask questions, but does not establish causation.
-      Some reconstructions use climate models and shared inputs: Osman uses
-      model priors that include greenhouse-gas forcing. Its relationship with
-      CO₂ is not a fully independent test. Miller's sea-level estimates also
-      use temperature-related inputs, which can influence their agreement
-      with temperature.</p>
-    </details>
-    <details>
-    <summary>Controls and updates</summary>
-    <p>Scroll, +/D or −/A to zoom; 0–9 select time scales. C or Space toggles the cursor.
-      Tab focuses dataset buttons; Enter or Space selects one. Left/Right moves between focused buttons.
-      Hover tooltips always include the sample source.</p>
-    <p>Each panel fits its visible values and uncertainty bands, including where
-      a connecting line meets the left edge. Orbit keeps a fixed vertical scale.
-      Similar shapes do not mean equal physical changes. Year markers mean January 1;
-      close views show calendar dates. Samples retain their original averaging periods.</p>
-    <p>BP in the cursor box means years before 1950. Short source names and
-      uncertainty labels keep the readout compact; the sections above explain
-      each record. Band definitions differ between sources and are not all
-      95% intervals.</p>
-    <p>GitHub checks current temperature, CO₂, solar and satellite sea-level observations
-      on the 1st and 16th of each month. Reload the page to load the latest published
-      snapshot. Historical reconstructions stay on their reviewed versions.</p>
-    </details>
-    <footer class="info-links">
-      <p><a href="https://github.com/BetaNumeric/perspective" target="_blank" rel="noopener noreferrer">GitHub</a></p>
-      <a href="https://github.com/BetaNumeric/perspective/blob/main/data/SOURCES.md" target="_blank" rel="noopener noreferrer">Sources</a>
-    </footer>
+      <p>Compare a dataset above with global temperature below. Scroll to zoom
+        and hover to read values, dates and sources. Time stays linear:
+        equal distances represent equal amounts of time.</p>
+      <details>
+        <summary>Reading the charts</summary>
+        <p>Most panels fit their visible values and shaded bands. Orbit keeps a
+          fixed vertical range. Check the units: similar shapes can represent
+          very different amounts of change.</p>
+        <p>Dashed vertical markers identify source joins; lines and bands stop
+          there. A jump can reflect different reconstruction methods. Lines
+          connect available samples within a source without adding measurements.</p>
+        <p>Shading shows reported uncertainty. Percentages and ±1σ or ±2σ labels
+          describe different ranges; σ means one standard deviation. The bands
+          exclude uncertainty from aligning sources. Records without bands
+          also have uncertainty.</p>
+        <p><strong>BP</strong> means years before 1950. CE and BCE are calendar
+          years. Year markers fall on January 1; close views show calendar dates.
+          Sample dates, stage intervals and averaging periods appear on hover.
+          Zooming cannot reveal changes finer than the source data.</p>
+        <p>Visual correlation helps you ask questions but does not establish
+          causation. Some records share models or inputs: Osman's temperature
+          reconstruction includes greenhouse-gas forcing in its model priors,
+          and Miller's sea-level calculations use temperature-related inputs.</p>
+      </details>
+      <details>
+        <summary>Global temperature</summary>
+        <p>Values show the difference from the <strong>1961–1990</strong>
+          average. From oldest to newest, the curve uses:</p>
+        <ul>
+          <li>About 485–66 million years BP:
+            <a href="https://doi.org/10.1126/science.adk3705">PhanDA</a>, by geological stage.</li>
+          <li>66–2 million years BP: Hansen's global estimate.</li>
+          <li>2 million–24,000 BP:
+            <a href="https://doi.org/10.1038/nature19798">Snyder</a>, a smoothed reconstruction.</li>
+          <li>24,000 BP to before 1 CE: Osman's 200-year means.</li>
+          <li>1–1879 CE: PAGES2k's annual reconstruction.</li>
+          <li>1880 CE onward: GISS monthly observations.</li>
+        </ul>
+        <p>GISS uses its 1961–1990 mean. Hansen uses its published 14 °C
+          reference; PhanDA adopts the same value as an application assumption.
+          Osman is aligned to PAGES2k over 150–1750 CE;
+          Snyder uses Osman's aligned 0–5,000 BP mean. These constant shifts
+          preserve variability while the methods and temperature definitions differ.</p>
+        <p>Shading shows PhanDA's <strong>90% ensemble range</strong>,
+          PAGES2k's 95% ensemble range, Snyder's 95% reconstruction interval,
+          and Osman's ±1σ ensemble spread. Horizontal dating uncertainty is
+          not shown. PhanDA's stages span millions of years; Snyder's dense grid
+          is smoothed by dating uncertainty. These records cannot precisely rank
+          the coldest period or establish rates and timing lags across joins.</p>
+      </details>
+      <details>
+        <summary>Atmospheric CO₂</summary>
+        <p>CO₂ is measured in parts per million (ppm). Daily Scripps and NOAA
+          station observations follow the Antarctic ice-core composite.
+          Ice-core shading shows ±1σ concentration measurement uncertainty;
+          gas-age uncertainty is excluded.</p>
+        <p>For about 66 million years to the ice-core record,
+          <a href="https://doi.org/10.1126/science.adi5177">CenCO₂PIP</a>
+          shows median 500,000-year averages with a <strong>95% credible interval</strong>.
+          The band describes uncertainty in each average, not all short-term changes.</p>
+        <p>Before 66 million years BP,
+          <a href="https://doi.org/10.1038/ncomms14845">Foster et al.</a>
+          reaches about 420 million years BP with a smoothed, most likely estimate
+          and a <strong>68% confidence range</strong>. Its 500,000-year grid is
+          finer than the changes the reconstruction can resolve.</p>
+        <p>Foster and CenCO₂PIP disagree strongly near their join. Their published
+          ppm values are preserved; the separated ends do not measure a sudden
+          atmospheric change. Compare broad trends, allowing for different
+          methods and averaging periods.</p>
+      </details>
+      <details>
+        <summary>Orbital eccentricity</summary>
+        <p>Zeebe's ZB18a solution describes the shape of Earth's orbit. Samples
+          are 1,600 years apart and end at 2000 CE, the calculation's reference
+          date. Zoom out if the panel is empty. Only the most recent 58 million
+          years are shown; the provider warns that older orbital phase is unconstrained.</p>
+      </details>
+      <details>
+        <summary>Solar irradiance</summary>
+        <p>Total solar irradiance is the power of sunlight per unit area,
+          measured in W/m² at a fixed distance of 1 AU. The curve combines
+          SATIRE / CMIP6 reconstructions, the NNL model from 1874, and TSIS
+          satellite observations from 2018.</p>
+        <p>Historical records receive constant shifts based on shared dates,
+          using the median of monthly differences to reduce the influence of exceptional months.
+          TSIS keeps its measured level. Models can differ in trends and cycle amplitudes.</p>
+        <p>Views wider than 200 years show annual means. Closer views use daily
+          dates with 50-day means from 1850 onward. Hover shows averaging periods,
+          partial-year coverage and provisional readings. Averages stay within
+          each source. Solar-cycle changes are typically about 0.1% of the
+          roughly 1361 W/m² total, so automatic scaling makes small changes look large.</p>
+      </details>
+      <details>
+        <summary>Volcanic aerosols</summary>
+        <p>HolVol / eVolv2k / CMIP6 supplies annual global stratospheric aerosol
+          optical depth from 9500 BCE to 2014 CE. Optical depth describes how
+          strongly aerosols block light; it does not count eruptions.
+          Component changes are marked.</p>
+      </details>
+      <details>
+        <summary>Sea level</summary>
+        <p>From oldest to newest, the curve uses
+          <a href="https://doi.org/10.1016/j.gr.2024.01.006">Marcilly</a>
+          (520–70 million years BP), Miller (about 67 million–798,000 BP),
+          <a href="https://doi.org/10.5194/cp-12-1079-2016">Spratt &amp; Lisiecki</a>
+          (798,000–24,000 BP),
+          <a href="https://doi.org/10.1073/pnas.1411762111">Lambeck</a>
+          (about 24,000–3,000 BP),
+          <a href="https://doi.org/10.1073/pnas.1517056113">Kopp</a>
+          (about 3,000 BP–1800 CE), tide gauges from 1807, and satellites.</p>
+        <p>Modern values are relative to the 1950 mean; satellites are aligned
+          using matching months with tide gauges. Older records use approximate
+          modern references. Spratt keeps its published calibration at 5,000 BP
+          and the Last Glacial Maximum.</p>
+        <p>Shading shows Kopp's <strong>±1σ reconstruction spread</strong>, Lambeck's
+          <strong>±2σ accuracy</strong>, and Spratt's <strong>95% bootstrap interval</strong>.
+          Spratt uses seven reconstructions through 430,000 BP and five thereafter,
+          with this change marked. Its 1,000-year grid does not resolve every fluctuation.</p>
+        <p>Lambeck and Spratt mainly describe sea-level changes associated with
+          ice volume. Modern observations also include thermal expansion.
+          Marcilly uses flooding maps and a modern land-height relationship,
+          sampled every 10 million years in
+          <a href="data/sealevel/marcilly2024-correction.pdf#page=2">corrected Table 1</a>.
+          It has no supplied uncertainty band. Plate tectonics and ocean-basin
+          changes also matter over these long periods.</p>
+      </details>
+      <details>
+        <summary>World population</summary>
+        <p>Our World in Data provides historical estimates through 2023.
+          Values from 2024 are projections in this snapshot, including years
+          that have passed, and appear as dashed lines. Only years through the
+          current calendar year are displayed. Lines connect annual samples
+          and stop at the newest one.</p>
+      </details>
+      <details>
+        <summary>Controls and observations</summary>
+        <p>Scroll, +/D or −/A to zoom; 0–9 select presets. C or Space toggles the
+          cursor. Tab focuses dataset buttons; Enter or Space selects one.
+          On a focused button, Left/Right selects an adjacent dataset and
+          Home/End selects the first/last. Close this guide with × or Escape.</p>
+        <p>GitHub checks current GISS, NOAA, TSIS and Colorado observations on
+          the 1st and 16th of each month. Reload to load the latest deployed
+          snapshots. Historical reconstructions and population stay on their
+          documented versions.</p>
+      </details>
+      <footer class="info-links">
+        <p><a href="https://github.com/BetaNumeric/perspective" target="_blank" rel="noopener noreferrer">GitHub repository</a></p>
+        <a href="https://github.com/BetaNumeric/perspective/blob/main/data/SOURCES.md" target="_blank" rel="noopener noreferrer">Data sources and methods</a>
+      </footer>
     </div>
   </dialog>
   <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.min.js"></script>

@@ -28,6 +28,7 @@ function preload() {
   sourceTables.gissTempRaw = loadSourceLines('data/temperature/GLB.Ts+dSST.txt');
 
   // CO2 (oldest -> newest)
+  sourceTables.co2FosterRaw = loadSourceLines('data/co2/foster2017-loess.csv');
   sourceTables.co2CencopipRaw = loadSourceLines('data/co2/cencopip2023-500kyr.csv');
   sourceTables.co2AntarcticaRaw = loadSourceLines('data/co2/antarctica2015co2composite-noaa.txt');
   sourceTables.co2InSituRaw = loadSourceLines('data/co2/daily_in_situ_co2_mlo.csv');
@@ -43,6 +44,7 @@ function preload() {
   sourceTables.solarIrradianceTsisRaw = loadSourceLines('data/solar/tsis_tsi_24hr.txt');
 
   // Sea Level (oldest -> newest)
+  sourceTables.sealevelMarcillyRaw = loadSourceLines('data/sealevel/marcilly2024-modern-land.csv');
   sourceTables.sealevelMillerRaw = loadSourceLines('data/sealevel/miller2024-sealevel.txt');
   sourceTables.sealevelSprattRaw = loadSourceLines('data/sealevel/spratt2016-noaa.txt');
   sourceTables.sealevelLambeckRaw = loadSourceLines('data/sealevel/lambeck2014-esl.csv');
@@ -118,7 +120,8 @@ function initializeView() {
     parseMiller2024SeaLevelRows(sourceTables.sealevelMillerRaw),
     parseKopp2016SeaLevelRows(sourceTables.sealevelKoppRaw),
     parseLambeck2014SeaLevelRows(sourceTables.sealevelLambeckRaw),
-    parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw));
+    parseSpratt2016SeaLevelRows(sourceTables.sealevelSprattRaw),
+    parseMarcillySeaLevelRows(sourceTables.sealevelMarcillyRaw));
 
   createTimelineEvents();
 
