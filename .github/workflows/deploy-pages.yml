@@ -8,6 +8,10 @@ on:
       - 'sketch.js'
       - 'js/**'
       - 'styles.css'
+      - 'manifest.webmanifest'
+      - 'service-worker.js'
+      - 'icons/**'
+      - 'vendor/**'
       - 'data/**'
       - 'scripts/**'
       - 'tests/**'
@@ -58,14 +62,17 @@ jobs:
       - name: Check the app and data-processing scripts
         run: |
           node tests/climate.test.cjs
+          node tests/pwa.test.cjs
           python -m unittest discover -s tests -p 'test_*.py'
 
       - name: Prepare the static website
         run: |
           mkdir _site
-          cp index.html sketch.js styles.css _site/
+          cp index.html sketch.js styles.css manifest.webmanifest service-worker.js _site/
           cp -R js _site/js
           cp -R data _site/data
+          cp -R icons _site/icons
+          cp -R vendor _site/vendor
 
       - name: Upload the website
         uses: actions/upload-pages-artifact@v3

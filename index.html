@@ -3,7 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <link rel="icon" href="data:," />
+  <meta name="theme-color" content="#001020" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Perspective" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
   <title>Perspective · Climate through time</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -193,6 +199,9 @@
           the 1st and 16th of each month. Reload to load the latest deployed
           snapshots. Historical reconstructions and population stay on their
           documented versions.</p>
+        <p>Install using your browser's Add to Home Screen or Install app command.
+          Once saved, the charts work offline with cached data. Reconnect and
+          reload for current observations. Source websites need an internet connection.</p>
       </details>
       <footer class="info-links">
         <p><a href="https://github.com/BetaNumeric/perspective" target="_blank" rel="noopener noreferrer">GitHub repository</a></p>
@@ -200,7 +209,7 @@
       </footer>
     </div>
   </dialog>
-  <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.min.js"></script>
+  <script src="vendor/p5/p5.min.js"></script>
   <script src="js/config.js"></script>
   <script src="js/time.js"></script>
   <script src="js/layout.js"></script>
@@ -217,6 +226,7 @@
   <script src="js/touch.js"></script>
   <script src="js/ui.js"></script>
   <script src="sketch.js"></script>
+  <script src="js/pwa.js"></script>
   <script>
     if (typeof p5 === 'undefined') reportStartupError(new Error('Could not load the chart library; check your connection'));
     initializeControls();

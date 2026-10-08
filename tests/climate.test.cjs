@@ -66,7 +66,7 @@ for (const name of ['createCanvas', 'resizeCanvas', 'cursor', 'textAlign',
 
 vm.createContext(context);
 const appScripts = [...fs.readFileSync('index.html', 'utf8').matchAll(/<script src="([^"]+)"/g)]
-  .map(match => match[1]).filter(path => !path.startsWith('https://'));
+  .map(match => match[1]).filter(path => !path.startsWith('https://') && !path.startsWith('vendor/'));
 function loadApp(targetContext) {
   for (const path of appScripts) vm.runInContext(fs.readFileSync(path, 'utf8'), targetContext, {filename:path});
 }

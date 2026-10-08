@@ -70,6 +70,12 @@ Sea-level reconstructions also describe different contributions. Lambeck and Spr
 
 Visual correlation does not establish causation. Some reconstructions share models, inputs or chronologies: Osman's model priors include greenhouse-gas forcing, and Miller's sea-level calculations use temperature-related inputs. Differences in resolution, dating and methods limit precise rates, timing lags and rankings of ancient extremes.
 
+## Installing and offline use
+
+Open [Perspective](https://betanumeric.github.io/perspective/) in your browser. On iPhone, choose **Share → Add to Home Screen**, enable **Open as Web App** if offered, then tap **Add**. On Android or desktop, use the browser's **Install app** command. The installed app opens in its own window and supports both portrait and landscape.
+
+The first online visit saves the app and its chart datasets for offline use. Open the installed app online once and allow caching to finish before going offline. Offline charts use the saved observations; reconnect and reload to fetch current deployed files. External source links need an internet connection. Browsers may remove cached files when storage is cleared or space is needed.
+
 ## Running locally
 
 From the project directory, start a static web server:
@@ -78,7 +84,7 @@ From the project directory, start a static web server:
 python -m http.server 8000
 ```
 
-Open `http://localhost:8000/`. The browser loads p5.js from a CDN; no bundler or package installation is required.
+Open `http://localhost:8000/`. The app includes p5.js; no bundler or package installation is required. Phone previews over a local HTTP address support the charts, while service workers require HTTPS or localhost. See the [phone-testing instructions](docs/DEVELOPMENT.md#testing-on-a-phone).
 
 Current GISS, NOAA, TSIS and Colorado observations are checked on the **1st and 16th of each month** by GitHub Actions. The app reads bundled snapshots; reload to load the latest deployed data. Historical reconstructions remain on their documented versions.
 
