@@ -11,8 +11,9 @@ The browser app uses p5.js global mode. Scripts load in the order listed in `ind
 | `sketch.js` | Shared state, data loading, initialization and panel drawing |
 | `js/config.js`, `js/time.js` | Source labels, configuration and calendar calculations |
 | `js/data/` | Dataset parsers, reference conversions and combinations |
-| `js/plot.js`, `js/timeline.js` | Curves, uncertainty bands, source joins and timeline context |
-| `js/ui.js`, `styles.css` | Buttons, keyboard input and the info dialog |
+| `js/plot.js`, `js/timeline.js` | Curves, uncertainty bands, source joins and timeline drawing |
+| `js/timeline-events.js` | Timeline dates, descriptions and further-reading links |
+| `js/ui.js`, `js/timeline-ui.js`, `styles.css` | Buttons, keyboard input, event cards and the info dialog |
 | `scripts/`, `tests/` | Data extraction, observation updates and validation |
 
 Required-file or reference-alignment failures display a loading error. The app requires valid calibration coverage before drawing a combined record.

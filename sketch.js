@@ -229,6 +229,7 @@ function draw() {
     textAlign(LEFT, BASELINE);
     fill(255);
     pop();
+    updateTimelineEventControls();
 
   }
   pScrollValue = scrollValue;

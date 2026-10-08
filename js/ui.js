@@ -57,13 +57,17 @@ function initializeControls() {
       || event.clientY < bounds.top || event.clientY > bounds.bottom) guide.close();
   });
   guide.addEventListener('close', () => { redrawRequested = true; });
+  initializeTimelineControls();
   updateComparisonControls();
 }
 
 function showDataGuide() {
   if (typeof document === 'undefined') return;
   const guide = document.getElementById('about-data');
-  if (guide && !guide.open) guide.showModal();
+  if (guide && !guide.open) {
+    closeTimelineDetails();
+    guide.showModal();
+  }
 }
 
 function dataGuideIsOpen() {
@@ -72,6 +76,7 @@ function dataGuideIsOpen() {
 
 function setZoom(value) {
   if (!Number.isFinite(value)) return;
+  if (timelineDetailsEvent && !timelineDetailsPinned) closeTimelineDetails();
   scrollValue = constrain(value, 1, MAX_SCROLL_VALUE);
   redrawRequested = true;
 }

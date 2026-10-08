@@ -1064,6 +1064,65 @@ test('native dataset controls expose the selected state and own activation and n
   }
 });
 
+test('timeline labels distinguish drags and cancellations from clicks and keyboard activation', () => {
+  const makeButton = () => ({ attributes:{}, events:{}, capture:null,
+    addEventListener(name, handler) { (this.events[name] ||= []).push(handler); },
+    setAttribute(name, value) { this.attributes[name] = value; },
+    removeAttribute(name) { delete this.attributes[name]; },
+    setPointerCapture(id) { this.capture = id; } });
+  const button = makeButton();
+  context.timelineDragTestButton = button;
+  context.timelineDragTestCalls = [];
+  run(`globalThis.savedTimelineDetailsFunction = showTimelineDetails;
+    showTimelineDetails = (landmark, pinned) => timelineDragTestCalls.push({name:landmark.name,pinned});
+    enableTimelineLabelDragging(timelineDragTestButton, event.find(landmark => landmark.name === 'Moon Landing'));`);
+  const fire = (name, details = {}) => {
+    let prevented = false, stopped = false;
+    const input = { pointerId:7, button:0, isPrimary:true, clientX:100, clientY:600, detail:1,
+      preventDefault() { prevented = true; }, stopPropagation() { stopped = true; }, ...details };
+    for (const handler of button.events[name] || []) handler(input);
+    return {prevented,stopped};
+  };
+  try {
+    assert.deepEqual(fire('pointerdown'), {prevented:false,stopped:false});
+    assert.equal(button.capture, 7);
+    fire('pointermove', {clientX:103});
+    fire('pointerup', {clientX:103});
+    fire('click');
+    assert.equal(context.timelineDragTestCalls.length, 1);
+    assert.equal(context.timelineDragTestCalls[0].pinned, true);
+
+    fire('pointerdown');
+    fire('pointermove', {clientX:150});
+    assert.equal(button.attributes['data-dragging'], 'true');
+    fire('pointermove');
+    fire('pointerup');
+    fire('lostpointercapture');
+    assert.deepEqual(fire('click'), {prevented:true,stopped:true});
+    assert.equal(context.timelineDragTestCalls.length, 1);
+    assert.equal(button.attributes['data-dragging'], undefined);
+    fire('click', {detail:0});
+    assert.equal(context.timelineDragTestCalls.length, 2);
+
+    for (const cancellation of ['pointercancel','lostpointercapture']) {
+      fire('pointerdown');
+      fire(cancellation);
+      assert.equal(fire('click').prevented, true);
+    }
+    assert.equal(context.timelineDragTestCalls.length, 2);
+    fire('pointerdown');
+    fire('pointercancel', {pointerId:8});
+    fire('pointerup');
+    assert.equal(fire('click').prevented, false);
+    assert.equal(context.timelineDragTestCalls.length, 3);
+  } finally {
+    run('showTimelineDetails = savedTimelineDetailsFunction');
+    delete context.savedTimelineDetailsFunction;
+    delete context.timelineDragTestButton;
+    delete context.timelineDragTestCalls;
+  }
+});
+
 test('autoscaling uses the visible line intersection rather than an off-screen extreme', () => {
   const bounds = run(`(() => {
     setZoom(25); oneYear = -1000 / scrollValue;
@@ -1485,6 +1544,78 @@ test('timeline tick generation stays bounded and aligned from years to cosmologi
   assert.deepEqual([...ancientTicks].map(tick => tick.year), [55,54,53,52,51,50]);
   assert.equal(run('timelineTicks(0,Infinity,1).length'), 0);
   assert.equal(run('timelineTicks(0,2026,0).length'), 0);
+});
+
+test('timeline context keeps short labels, sourced descriptions and accurate calendar dates', () => {
+  const details = run(`(() => {
+    const find = name => event.find(landmark => landmark.name === name);
+    return {
+      count: event.length,
+      complete: event.every(landmark => landmark.description && landmark.page && Number.isFinite(landmark.startYear)
+        && Number.isFinite(landmark.endYear) && landmark.startYear <= landmark.endYear),
+      short: event.every(landmark => !/approx/i.test(landmark.name)),
+      moon: find('Moon Landing').dateText(), berlin: find('Fall of Berlin Wall').dateText(),
+      covid: find('COVID-19').dateText(), wheel: find('Wheel').dateText(),
+      confucius: find('Life of Confucius').dateText(),
+      dinosaurs: find('Dinosaurs').dateText(),
+      present: find('Homo sapiens').dateText(),
+      erectus: find('Homo erectus').dateText(),
+      universeAligned: find('Big Bang').startYear === currentYear - 13800000000
+    };
+  })()`);
+  assert.equal(details.count, 46);
+  assert.equal(details.complete && details.short && details.universeAligned, true);
+  assert.equal(details.moon, '20 Jul 1969');
+  assert.equal(details.berlin, '9 Nov 1989');
+  assert.equal(details.covid, '30 Jan 2020');
+  assert.equal(details.wheel, 'Approximately 3,500 BCE');
+  assert.equal(details.confucius, 'Approximately 551 BCE – 479 BCE');
+  assert.equal(details.dinosaurs, 'Approximately 230 million years BP – 66 million years BP');
+  assert.equal(details.present, 'Approximately 300,000 years BP – present');
+  assert.equal(details.erectus, 'Approximately 2 million years BP – 100,000 years BP');
+});
+
+test('timeline labels preserve shrinking geometry and remain readable beyond short spans', () => {
+  const saved = { width: context.width, height: context.height, oneYear: run('oneYear') };
+  try {
+    context.width = 1280; context.height = 800;
+    const broad = run(`(() => {
+      oneYear = -0.001;
+      const landmark = event.find(landmark => landmark.name === 'Homo sapiens');
+      return { bounds: landmark.layout(), x: plotXFromYear(landmark.startYear) };
+    })()`);
+    const narrow = run(`(() => {
+      oneYear = -0.00001;
+      return event.find(landmark => landmark.name === 'Homo sapiens').layout();
+    })()`);
+    assert.equal(broad.bounds.startX, broad.x);
+    assert.ok(narrow.top > broad.bounds.top);
+    assert.ok(narrow.label.width < broad.bounds.label.width);
+    assert.ok(narrow.label.left + narrow.label.width <= narrow.right);
+    assert.ok(narrow.label.top + narrow.label.height <= narrow.bottom);
+    const lifespan = run(`(() => {
+      oneYear = -0.3;
+      const landmark = event.find(landmark => landmark.name === 'Life of Jesus');
+      return { bounds: landmark.layout(), fullLabelWidth: textWidth(landmark.name) + 10,
+        durationWidth: plotXFromYear(landmark.endYear) - plotXFromYear(landmark.startYear) };
+    })()`);
+    assert.equal(lifespan.bounds.label.width, lifespan.fullLabelWidth);
+    assert.ok(lifespan.bounds.label.width > lifespan.durationWidth);
+    assert.ok(Math.abs(lifespan.bounds.right - lifespan.bounds.left - lifespan.durationWidth) < 1e-9);
+    assert.equal(run(`(() => {
+      oneYear = -1000;
+      return event.find(landmark => landmark.name === 'Moon Landing').layout();
+    })()`), null);
+    const ongoing = run(`(() => {
+      oneYear = -100;
+      return event.find(landmark => landmark.name === 'Homo sapiens').layout();
+    })()`);
+    assert.equal(ongoing.label.left, run('shift'));
+    assert.equal(ongoing.right, context.width);
+  } finally {
+    Object.assign(context, {width:saved.width,height:saved.height});
+    run(`oneYear = ${saved.oneYear}`);
+  }
 });
 
 test('settled view stops rendering and drawing state remains balanced', () => {

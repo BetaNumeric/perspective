@@ -16,9 +16,23 @@
     <button type="button" data-comparison="5" aria-label="Global sea level" aria-pressed="false" disabled>Sea level</button>
     <button type="button" data-comparison="6" aria-label="World population" aria-pressed="false" disabled>Population</button>
   </nav>
-  <div id="app-status" role="status" hidden><p></p></div>
+  <div id="app-status" role="status" aria-atomic="true">
+    <span class="loading-spinner" aria-hidden="true"></span>
+    <p>Loading data…</p>
+  </div>
   <button id="data-info-button" type="button" aria-label="About the data"
     aria-haspopup="dialog" aria-controls="about-data"><span aria-hidden="true">i</span></button>
+  <div id="timeline-event-controls" role="group" aria-label="Timeline events"></div>
+  <aside id="timeline-details" role="dialog" aria-labelledby="timeline-details-title"
+    aria-describedby="timeline-details-date timeline-details-description" hidden>
+    <header>
+      <h2 id="timeline-details-title"></h2>
+      <button class="info-close" type="button" aria-label="Close event information">×</button>
+    </header>
+    <p id="timeline-details-date"></p>
+    <p id="timeline-details-description"></p>
+    <a id="timeline-details-link" target="_blank" rel="noopener noreferrer">Read more on Wikipedia ↗</a>
+  </aside>
   <dialog id="about-data" aria-labelledby="info-title">
     <header class="info-header">
       <h2 id="info-title">About Perspective</h2>
@@ -44,6 +58,11 @@
           years. Year markers fall on January 1; close views show calendar dates.
           Sample dates, stage intervals and averaging periods appear on hover.
           Zooming cannot reveal changes finer than the source data.</p>
+        <p>Timeline flags give familiar landmarks for the scale. Hover or focus
+          a label for its name and date; click or tap for an explanation and
+          a Wikipedia link. Close with ×, Escape or a click elsewhere. Labels
+          can extend beyond short bands; the bands show the duration. Older
+          dates and broad periods are estimates, explained in each card.</p>
         <p>Visual correlation helps you ask questions but does not establish
           causation. Some records share models or inputs: Osman's temperature
           reconstruction includes greenhouse-gas forcing in its model priors,
@@ -187,6 +206,8 @@
   <script src="js/data/sealevel.js"></script>
   <script src="js/plot.js"></script>
   <script src="js/timeline.js"></script>
+  <script src="js/timeline-events.js"></script>
+  <script src="js/timeline-ui.js"></script>
   <script src="js/ui.js"></script>
   <script src="sketch.js"></script>
   <script>

@@ -10,6 +10,8 @@ Both panels share a **linear time axis**: equal distances represent equal amount
 
 Choose a comparison with the top buttons, scroll to zoom, and hover to read values, dates and sources. Temperature stays in the bottom panel. The circular **i** button opens the guide; close it with **×**, **Escape**, or a click outside the dialog.
 
+Timeline labels provide familiar landmarks as you zoom. Hover or focus one for a compact name and date preview. Click or tap to open a card with a short explanation and a Wikipedia link; close it with **×**, **Escape**, or a click elsewhere. Dragging can start on a label and zooms the chart without opening its card. Ancient dates and broad periods are estimates; each card explains what its marker represents. Labels can extend beyond short bands; the band itself shows the duration.
+
 | Control | Action |
 | --- | --- |
 | Scroll | Zoom in or out |
