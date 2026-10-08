@@ -12,7 +12,7 @@ class TimelineEvent {
     const endX = plotXFromYear(this.endYear);
     const bottom = height - height / TIMELINE_HEIGHT_DIVISOR;
     const h = height / 4 + (height / 144) * width / (startX - width - height / 10);
-    const fontSize = height / TEXT_SIZE_DIVISOR_SMALL;
+    const fontSize = chartTextSize(TEXT_SIZE_DIVISOR_SMALL);
     textSize(fontSize);
     const labelWidth = textWidth(this.name) + 10;
     if (this.type === 0) {
@@ -23,12 +23,13 @@ class TimelineEvent {
       return { startX, left, right, top, bottom, fontSize,
         label: { left, top, width: Math.min(labelWidth, width - left), height: fontSize + 6 } };
     }
-    const top = height - h / 2 - height / TIMELINE_HEIGHT_DIVISOR_SMALL;
+    const flagHeight = Math.max(fontSize + 6, chartTickHeight());
+    const top = height - h / 2 - flagHeight;
     const left = Math.max(shift, startX);
     const right = Math.min(width, startX + labelWidth);
     if (right <= left) return null;
-    return { startX, left, right, top, bottom: top + height / TIMELINE_HEIGHT_DIVISOR_SMALL, fontSize,
-      label: { left, top, width: right - left, height: height / TIMELINE_HEIGHT_DIVISOR_SMALL } };
+    return { startX, left, right, top, bottom: top + flagHeight, fontSize,
+      label: { left, top, width: right - left, height: flagHeight } };
   }
 
   draw() {

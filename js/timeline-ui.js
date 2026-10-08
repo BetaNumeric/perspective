@@ -83,10 +83,11 @@ function enableTimelineLabelDragging(button, landmark) {
   };
   button.addEventListener('pointerdown', input => {
     if (input.button !== 0 || !input.isPrimary) return;
+    if (input.pointerType !== 'touch') chartTouchClickSuppressed = false;
     press = { id: input.pointerId, x: input.clientX, y: input.clientY };
     dragged = false;
     // Capture keeps the gesture on this label as zooming moves it across the screen.
-    // Mouse and touch events still reach p5's existing chart drag handlers.
+    // Events still reach the chart's mouse and touch gesture handlers.
     button.setPointerCapture(input.pointerId);
   });
   button.addEventListener('pointermove', trackMovement);
@@ -103,7 +104,7 @@ function enableTimelineLabelDragging(button, landmark) {
     });
   }
   button.addEventListener('click', input => {
-    if (input.detail > 0 && dragged) {
+    if (input.detail > 0 && (dragged || touchGestureSuppressesClick())) {
       input.preventDefault();
       input.stopPropagation();
       return;
@@ -118,10 +119,11 @@ function updateTimelineEventControls() {
     const label = landmark.layout()?.label;
     button.hidden = !label;
     if (!label) continue;
+    const padding = 3;
     button.style.left = (label.left - shift) + 'px';
-    button.style.top = label.top + 'px';
+    button.style.top = (label.top - padding) + 'px';
     button.style.width = label.width + 'px';
-    button.style.height = label.height + 'px';
+    button.style.height = (label.height + padding * 2) + 'px';
   }
   if (timelineDetailsEvent) {
     if (!timelineDetailsPinned && timelineEventControls.get(timelineDetailsEvent).hidden) closeTimelineDetails();
@@ -172,10 +174,11 @@ function positionTimelineDetails() {
   const button = timelineEventControls.get(timelineDetailsEvent);
   if (!card || !button || card.hidden) return;
   const anchor = button.getBoundingClientRect();
-  const left = Math.max(8, Math.min(anchor.left, window.innerWidth - card.offsetWidth - 8));
+  const bounds = chartViewportBounds();
+  const left = Math.max(bounds.left + 8, Math.min(anchor.left, bounds.left + bounds.width - card.offsetWidth - 8));
   let top = anchor.top - card.offsetHeight - 8;
-  if (top < 8) top = anchor.bottom + 8;
-  top = Math.max(8, Math.min(top, window.innerHeight - card.offsetHeight - 8));
+  if (top < bounds.top + 8) top = anchor.bottom + 8;
+  top = Math.max(bounds.top + 8, Math.min(top, bounds.top + bounds.height - card.offsetHeight - 8));
   card.style.left = left + 'px';
   card.style.top = top + 'px';
 }

@@ -4,9 +4,7 @@ const TIMELINE_HEIGHT_DIVISOR = 14;   // Bottom timeline height
 const TIMELINE_HEIGHT_DIVISOR_SMALL = 36; // Small timeline elements
 const TEXT_SIZE_DIVISOR_MEDIUM = 48;  // Medium text scaling
 const TEXT_SIZE_DIVISOR_SMALL = 60;   // Small text scaling
-const TEXT_SIZE_DIVISOR_TINY = 70;    // Tiny text scaling
 const SHIFT_OFFSET = 15;              // Left margin offset
-const DATA_PANEL_HEIGHT_DIVISOR = 3;  // Data panel height
 
 // Constants for zoom and scrolling
 const DEFAULT_SCROLL_VALUE = 25;      // Starting zoom level

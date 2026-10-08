@@ -10,6 +10,7 @@ The browser app uses p5.js global mode. Scripts load in the order listed in `ind
 | --- | --- |
 | `sketch.js` | Shared state, data loading, initialization and panel drawing |
 | `js/config.js`, `js/time.js` | Source labels, configuration and calendar calculations |
+| `js/layout.js`, `js/touch.js` | Viewport sizing, shared panel layout and touch gestures |
 | `js/data/` | Dataset parsers, reference conversions and combinations |
 | `js/plot.js`, `js/timeline.js` | Curves, uncertainty bands, source joins and timeline drawing |
 | `js/timeline-events.js` | Timeline dates, descriptions and further-reading links |

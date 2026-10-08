@@ -186,7 +186,7 @@ test('the PhanDA join marker uses its 66 Ma boundary and neither line nor band c
   try {
     const result = run(`(() => {
       setZoom(100000000 * 1000 / (width-shift)); oneYear=-1000/scrollValue;
-      const series=data[0]; series.rectY=panelTargetY(0); series.rectH=height/DATA_PANEL_HEIGHT_DIVISOR;
+      const series=data[0]; series.rectY=panelTargetY(0); series.rectH=chartPanelHeight();
       const index=series.seriesRows.findIndex(row=>row.source==='phanda');
       const vertices=[]; let polygon=[];
       const oldBegin=beginShape, oldVertex=vertex, oldEnd=endShape;
@@ -727,7 +727,7 @@ test('older source-join labels remain visible in crowded mobile views', () => {
     for (const [dataset,years,label] of [[1,450e6,'Foster / CenCO₂PIP'],[5,550e6,'Marcilly / Miller']]) {
       labels.length=0;markers.length=0;
       run(`setZoom(${years}*1000/(width-shift));oneYear=-1000/scrollValue;
-        data[${dataset}].rectY=panelTargetY(1);data[${dataset}].rectH=height/DATA_PANEL_HEIGHT_DIVISOR;
+        data[${dataset}].rectY=panelTargetY(1);data[${dataset}].rectH=chartPanelHeight();
         data[${dataset}].drawSourceJoins(Math.min(data[${dataset}].dataX.length,data[${dataset}].visiblePointCount()+1));`);
       assert.ok(labels.includes(label));
       assert.ok(markers.length>7 && markers.every(([x,,endX])=>x===endX));
@@ -1627,4 +1627,189 @@ test('settled view stops rendering and drawing state remains balanced', () => {
   const settledFrames = frames.backgrounds;
   run('mouseMoved(); draw()');
   assert.equal(frames.backgrounds, settledFrames+1);
+});
+
+function withTouchChart(check) {
+  const saved = { width: context.width, height: context.height, mouseIsPressed: context.mouseIsPressed,
+    mouseX: context.mouseX, mouseY: context.mouseY, pmouseX: context.pmouseX, pmouseY: context.pmouseY };
+  const state = run('({ scrollValue, oneYear, showCursor, chartTouchMode, chartTouchCursor, chartTouchClickSuppressed })');
+  const canvas = { matches: selector => selector.includes('canvas'), setPointerCapture() {} };
+  const input = (id, x, y, target = canvas) => ({ pointerId: id, pointerType: 'touch', clientX: x, clientY: y, target });
+  try {
+    Object.assign(context, {width:375,height:844});
+    run('resetChartTouch(); setZoom(25); oneYear = -1000 / scrollValue');
+    check(input, canvas);
+  } finally {
+    run('resetChartTouch()');
+    Object.assign(context, saved);
+    context.savedTouchState = state;
+    run('({scrollValue,oneYear,showCursor,chartTouchMode,chartTouchCursor,chartTouchClickSuppressed} = savedTouchState); redrawRequested=true');
+    delete context.savedTouchState;
+  }
+}
+
+test('pinching changes only the time range, reverses cleanly, and cannot become a one-finger drag', () => {
+  withTouchChart(input => {
+    const anchor = run('currentYear');
+    context.beginChartTouch(input(1,100,300));
+    context.beginChartTouch(input(2,200,300));
+    context.moveChartTouch(input(2,300,300));
+    assert.equal(run('scrollValue'),12.5);
+    assert.equal(run('currentYear'),anchor);
+    assert.equal(run('touchGestureSuppressesClick()'),true);
+    context.moveChartTouch(input(2,200,300));
+    assert.equal(run('scrollValue'),25);
+    context.endChartTouch(input(2,200,300));
+    context.moveChartTouch(input(1,150,300));
+    assert.equal(run('scrollValue'),25);
+    context.endChartTouch(input(1,150,300));
+    assert.equal(run('chartTouchPointers.size'),0);
+    assert.equal(run('chartCursorPosition()'),null);
+
+    run('setZoom(1)');
+    context.beginChartTouch(input(3,100,300));
+    context.beginChartTouch(input(4,200,300));
+    context.moveChartTouch(input(4,350,300));
+    assert.equal(run('scrollValue'),1);
+    context.endChartTouch(input(3,100,300),true);
+    context.endChartTouch(input(4,350,300),true);
+    assert.equal(run('chartTouchPointers.size'),0);
+  });
+});
+
+test('touch taps pin the shared date, small jitter is tolerated, and zoom gestures clear it', () => {
+  withTouchChart(input => {
+    context.beginChartTouch(input(1,160,220));
+    context.moveChartTouch(input(1,162,222));
+    context.endChartTouch(input(1,162,222));
+    assert.equal(run('scrollValue'),25);
+    assert.equal(run('touchGestureSuppressesClick()'),false);
+    assert.equal(run('chartCursorPosition().touch'),true);
+    assert.ok(Math.abs(run('chartCursorPosition().x')-162)<1e-8);
+    const pinnedDate = run('chartTouchCursor.year');
+    context.mouseX=300; context.mouseY=600;
+    assert.equal(run('chartTouchCursor.year'),pinnedDate);
+    assert.ok(Math.abs(run('chartCursorPosition().x')-162)<1e-8);
+
+    const texts = [], savedText = context.text;
+    context.text = value => texts.push(value);
+    try {
+      run('selectComparison(1); data[0].rectY=panelTargetY(0); data[1].rectY=panelTargetY(1); draw()');
+      assert.ok(texts.some(value=>value.includes('ppm')));
+      assert.ok(texts.some(value=>value.includes('°C')));
+    } finally { context.text=savedText; }
+
+    context.beginChartTouch(input(2,160,220));
+    context.moveChartTouch(input(2,220,222));
+    context.endChartTouch(input(2,220,222));
+    assert.ok(run('scrollValue')>25);
+    assert.equal(run('chartCursorPosition()'),null);
+    assert.equal(run('touchGestureSuppressesClick()'),true);
+    context.beginChartTouch(input(3,180,220));
+    context.endChartTouch(input(3,180,220));
+    assert.equal(run('chartCursorPosition().touch'),true);
+    assert.equal(run('touchGestureSuppressesClick()'),false);
+  });
+});
+
+test('vertical touch drags overlap the upper panel without zooming, hold it in place, and return on release', () => {
+  withTouchChart(input => {
+    run('selectComparison(1); data[1].rectY=panelTargetY(1); data[1].draw()');
+    const panelY = run('data[1].rectY');
+    context.beginChartTouch(input(1,160,panelY+20));
+    context.moveChartTouch(input(1,162,panelY+320));
+    Object.assign(context,{mouseIsPressed:true,pmouseX:160,pmouseY:panelY+20,mouseX:162,mouseY:panelY+320});
+    for(let frame=0;frame<5;frame++) run('data[1].draw()');
+    assert.equal(run('scrollValue'),25);
+    assert.equal(run('data[1].rectY'),panelY+300);
+    assert.ok(run('data[1].rectY > panelTargetY(0)'));
+    context.endChartTouch(input(1,162,panelY+320));
+    context.mouseIsPressed=false;
+    for(let frame=0;frame<60;frame++) run('draw()');
+    assert.equal(run('data[1].rectY'),panelY);
+    assert.equal(run('chartCursorPosition()'),null);
+    context.beginChartTouch(input(2,180,220));
+    context.endChartTouch(input(2,180,220),true);
+    assert.equal(run('chartCursorPosition()'),null);
+    assert.equal(run('touchGestureSuppressesClick()'),true);
+    context.beginChartTouch(input(3,180,220));
+    run('resetChartTouch()');
+    assert.equal(run('chartTouchPointers.size'),0);
+    assert.equal(run('chartCursorPosition()'),null);
+  });
+});
+
+test('portrait and landscape layouts keep room for both panels and readable event flags', () => {
+  const saved = { width:context.width,height:context.height };
+  try {
+    for (const [width,height,header] of [[375,844,88],[844,375,44],[1280,720,60]]) {
+      Object.assign(context,{width,height});
+      assert.equal(run('chartHeaderHeight()'),header);
+      assert.equal(run('panelTargetY(0) + chartPanelHeight()'),height*0.75);
+      assert.ok(run('chartTextSize(TEXT_SIZE_DIVISOR_MEDIUM,16)')>=16);
+      assert.ok(run('chartTextSize(TEXT_SIZE_DIVISOR_SMALL)')>=12);
+    }
+  } finally { Object.assign(context,saved); }
+});
+
+test('native touch cancellation still activates timeline taps once and never activates drags or pinches', () => {
+  withTouchChart(input => {
+    let clicks = 0;
+    const label = { matches: selector => selector.includes('button'), setPointerCapture() {}, click() { clicks++; } };
+    context.beginChartTouch(input(1,150,700,label));
+    context.endChartTouch(input(1,150,700,label));
+    assert.equal(clicks,1);
+    context.beginChartTouch(input(2,150,700,label));
+    context.moveChartTouch(input(2,190,700,label));
+    context.endChartTouch(input(2,190,700,label));
+    assert.equal(clicks,1);
+    context.beginChartTouch(input(3,150,700,label));
+    context.beginChartTouch(input(4,250,700,label));
+    context.moveChartTouch(input(4,300,700,label));
+    context.endChartTouch(input(4,300,700,label));
+    context.endChartTouch(input(3,150,700,label));
+    assert.equal(clicks,1);
+    context.beginChartTouch(input(5,150,700,label));
+    context.endChartTouch(input(5,150,700,label),true);
+    assert.equal(clicks,1);
+    context.beginChartTouch(input(6,150,700,label));
+    context.endChartTouch(input(6,150,700,label));
+    assert.equal(clicks,2);
+  });
+});
+
+test('Safari guards cancel chart touch defaults and selection while leaving native taps and info scrolling available', () => {
+  const viewportListeners = {}, documentListeners = {};
+  const viewport = { addEventListener(name,handler,options) { viewportListeners[name] = {handler,options}; } };
+  context.document = {
+    getElementById: id => id==='chart-viewport' ? viewport : null,
+    addEventListener(name,handler,options) { documentListeners[name] = {handler,options}; }
+  };
+  const dispatch = (listener, target, count=1, cancelable=true) => {
+    let prevented = false;
+    listener.handler({target,cancelable,touches:Array(count).fill({}),preventDefault(){prevented=true;}});
+    return prevented;
+  };
+  const surface = {closest:selector=>selector.includes('canvas') || selector.includes('chart-viewport') ? {} : null};
+  const control = {closest:selector=>selector==='#chart-viewport' ? {} : null};
+  const info = {closest:()=>null};
+  try {
+    run('initializeChartTouchGuards()');
+    for (const name of ['touchstart','touchmove']) {
+      assert.equal(viewportListeners[name].options.capture,true);
+      assert.equal(viewportListeners[name].options.passive,false);
+      assert.equal(dispatch(viewportListeners[name],surface),true);
+      assert.equal(dispatch(viewportListeners[name],surface,1,false),false);
+      assert.equal(dispatch(viewportListeners[name],control),false);
+      assert.equal(dispatch(viewportListeners[name],control,2),true);
+      assert.equal(dispatch(viewportListeners[name],info),false);
+    }
+    for (const name of ['gesturestart','gesturechange','gestureend']) {
+      assert.equal(documentListeners[name].options.passive,false);
+      assert.equal(dispatch(documentListeners[name],surface,2),true);
+      assert.equal(dispatch(documentListeners[name],control,2),true);
+      assert.equal(dispatch(documentListeners[name],info,2),false);
+    }
+    assert.equal(dispatch(documentListeners.selectstart,info),true);
+  } finally { delete context.document; }
 });

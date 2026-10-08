@@ -10,11 +10,16 @@ Both panels share a **linear time axis**: equal distances represent equal amount
 
 Choose a comparison with the top buttons, scroll to zoom, and hover to read values, dates and sources. Temperature stays in the bottom panel. The circular **i** button opens the guide; close it with **×**, **Escape**, or a click outside the dialog.
 
+On a touchscreen, pinch or drag horizontally to zoom. Drag the upper graph down to overlap it with temperature; it returns when released. Tap a graph to leave a cursor at that date, with readings for both panels. Dragging or pinching clears the cursor; tap again to inspect another date. The buttons use two rows on narrow portrait screens.
+
 Timeline labels provide familiar landmarks as you zoom. Hover or focus one for a compact name and date preview. Click or tap to open a card with a short explanation and a Wikipedia link; close it with **×**, **Escape**, or a click elsewhere. Dragging can start on a label and zooms the chart without opening its card. Ancient dates and broad periods are estimates; each card explains what its marker represents. Labels can extend beyond short bands; the band itself shows the duration.
 
 | Control | Action |
 | --- | --- |
 | Scroll | Zoom in or out |
+| Horizontal drag / pinch | Zoom in or out |
+| Drag the upper graph vertically | Overlap the graphs while holding |
+| Tap a graph | Place the cursor and read both datasets |
 | `+` / `D` / Right arrow | Zoom in |
 | `-` / `A` / Left arrow | Zoom out |
 | `0`–`9` | Select a zoom preset |

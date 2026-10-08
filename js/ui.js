@@ -22,6 +22,7 @@ function updateComparisonControls() {
 }
 
 function initializeControls() {
+  initializeChartTouchGuards();
   const infoButton = document.getElementById('data-info-button');
   const guide = document.getElementById('about-data');
   const buttons = [...document.querySelectorAll('[data-comparison]')];
@@ -66,6 +67,7 @@ function showDataGuide() {
   const guide = document.getElementById('about-data');
   if (guide && !guide.open) {
     closeTimelineDetails();
+    resetChartTouch();
     guide.showModal();
   }
 }
@@ -117,18 +119,19 @@ function mouseMoved() {
   redrawRequested = true;
 }
 
-function mouseDragged() {
-  if (dataGuideIsOpen()) return;
-  const deltaX = mouseX - pmouseX;
+function zoomByHorizontalDrag(deltaX, x) {
   let zoomDivisor;
-  if (mouseX < width - 200) zoomDivisor = width - mouseX - shift;
+  if (x < width - 200) zoomDivisor = width - x - shift;
   else zoomDivisor = 200;
-
   zoomDivisor = max(10, abs(zoomDivisor));
   setZoom(scrollValue + deltaX * (scrollValue / zoomDivisor));
 }
 
+function mouseDragged() {
+  if (dataGuideIsOpen()) return;
+  zoomByHorizontalDrag(mouseX - pmouseX, mouseX);
+}
+
 function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
-  redrawRequested = true;
+  resizeChartViewport();
 }

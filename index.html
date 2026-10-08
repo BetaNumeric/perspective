@@ -2,27 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <link rel="icon" href="data:," />
   <title>Perspective · Climate through time</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <nav id="dataset-controls" aria-label="Datasets to compare with global temperature">
-    <button type="button" data-comparison="1" aria-label="Carbon dioxide" aria-pressed="true" disabled>CO₂</button>
-    <button type="button" data-comparison="2" aria-label="Orbital eccentricity" aria-pressed="false" disabled>Orbit</button>
-    <button type="button" data-comparison="3" aria-label="Solar irradiance" aria-pressed="false" disabled>Solar</button>
-    <button type="button" data-comparison="4" aria-label="Volcanic optical depth" aria-pressed="false" disabled>Volcanoes</button>
-    <button type="button" data-comparison="5" aria-label="Global sea level" aria-pressed="false" disabled>Sea level</button>
-    <button type="button" data-comparison="6" aria-label="World population" aria-pressed="false" disabled>Population</button>
-  </nav>
-  <div id="app-status" role="status" aria-atomic="true">
-    <span class="loading-spinner" aria-hidden="true"></span>
-    <p>Loading data…</p>
-  </div>
-  <button id="data-info-button" type="button" aria-label="About the data"
-    aria-haspopup="dialog" aria-controls="about-data"><span aria-hidden="true">i</span></button>
-  <div id="timeline-event-controls" role="group" aria-label="Timeline events"></div>
+  <main id="chart-viewport">
+    <nav id="dataset-controls" aria-label="Datasets to compare with global temperature">
+      <button type="button" data-comparison="1" aria-label="Carbon dioxide" aria-pressed="true" disabled>CO₂</button>
+      <button type="button" data-comparison="2" aria-label="Orbital eccentricity" aria-pressed="false" disabled>Orbit</button>
+      <button type="button" data-comparison="3" aria-label="Solar irradiance" aria-pressed="false" disabled>Solar</button>
+      <button type="button" data-comparison="4" aria-label="Volcanic optical depth" aria-pressed="false" disabled>Volcanoes</button>
+      <button type="button" data-comparison="5" aria-label="Global sea level" aria-pressed="false" disabled>Sea level</button>
+      <button type="button" data-comparison="6" aria-label="World population" aria-pressed="false" disabled>Population</button>
+    </nav>
+    <div id="app-status" role="status" aria-atomic="true">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <p>Loading data…</p>
+    </div>
+    <button id="data-info-button" type="button" aria-label="About the data"
+      aria-haspopup="dialog" aria-controls="about-data"><span aria-hidden="true">i</span></button>
+    <div id="timeline-event-controls" role="group" aria-label="Timeline events"></div>
+  </main>
   <aside id="timeline-details" role="dialog" aria-labelledby="timeline-details-title"
     aria-describedby="timeline-details-date timeline-details-description" hidden>
     <header>
@@ -39,9 +41,12 @@
       <form method="dialog"><button class="info-close" type="submit" aria-label="Close information" title="Close">×</button></form>
     </header>
     <div class="info-content">
-      <p>Compare a dataset above with global temperature below. Scroll to zoom
-        and hover to read values, dates and sources. Time stays linear:
+      <p>Compare a dataset above with global temperature below. Scroll, drag
+        horizontally or pinch to zoom. Hover or tap a graph to read values,
+        dates and sources. Time stays linear:
         equal distances represent equal amounts of time.</p>
+      <p>Drag the upper graph down to overlap it with temperature. Release it
+        to return to the stacked view.</p>
       <details>
         <summary>Reading the charts</summary>
         <p>Most panels fit their visible values and shaded bands. Orbit keeps a
@@ -198,6 +203,7 @@
   <script src="https://cdn.jsdelivr.net/npm/p5@1.11.11/lib/p5.min.js"></script>
   <script src="js/config.js"></script>
   <script src="js/time.js"></script>
+  <script src="js/layout.js"></script>
   <script src="js/data/common.js"></script>
   <script src="js/data/temperature.js"></script>
   <script src="js/data/co2.js"></script>
@@ -208,6 +214,7 @@
   <script src="js/timeline.js"></script>
   <script src="js/timeline-events.js"></script>
   <script src="js/timeline-ui.js"></script>
+  <script src="js/touch.js"></script>
   <script src="js/ui.js"></script>
   <script src="sketch.js"></script>
   <script>

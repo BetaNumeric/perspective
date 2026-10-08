@@ -88,7 +88,9 @@ function setup() {
 }
 
 function initializeView() {
-  createCanvas(windowWidth, windowHeight);
+  const bounds = chartViewportBounds();
+  createCanvas(Math.round(bounds.width), Math.round(bounds.height))?.parent('chart-viewport');
+  measureChartHeader();
   currentYear = decimalYearFromYmd(year(), month(), day() + 1);
   if (!Number.isFinite(currentYear)) currentYear = year();
   sourceTables.earthOrbit = buildEarthOrbitTableFromZeebe(sourceTables.zeebeOrbitalRaw);
@@ -133,6 +135,7 @@ function initializeView() {
   data.push(new Data(sourceTables.volcanic, 'time', 'Volcanic Activity', 'OD', 1, color(255, 180, 80), true, 'Volcanic optical depth'));
   data.push(new Data(sourceTables.sealevel, 'time', 'Sealevel', 'm', 1, color(0, 128, 255), true, 'Global sea level'));
   data.push(new Data(sourceTables.population, 'time', 'Population', 'people', 1, color(255, 128, 200), true, 'World population'));
+  if (typeof document !== 'undefined') initializeChartTouch();
 }
 
 function draw() {
@@ -151,8 +154,8 @@ function draw() {
   if (redrawRequested || dist(mouseX, mouseY, pmouseX, pmouseY) > 0
     || scrollValue !== pScrollValue
     || data[selectedData].position !== 1
-    || Math.abs(data[selectedData].rectY - panelTargetY(1)) > Data.SNAP_THRESHOLD_PX
-    || Math.abs(data[0].rectY - panelTargetY(0)) > Data.SNAP_THRESHOLD_PX) {
+    || data[selectedData].rectY !== panelTargetY(1)
+    || data[0].rectY !== panelTargetY(0)) {
     redrawRequested = false;
     push();
     translate(-shift, 0); // Apply left margin shift
@@ -162,7 +165,7 @@ function draw() {
 
     fill(0);
     noStroke();
-    rect(0, 0, width, height / GUI_HEIGHT_DIVISOR);
+    rect(0, 0, width, chartHeaderHeight());
 
     data[0].draw();
     data[selectedData].position = 1;
@@ -182,17 +185,20 @@ function draw() {
     }
 
     // Draw crosshair and time readout
-    if (showCursor && mouseX >= 0 && mouseX <= width - shift && mouseY > height / GUI_HEIGHT_DIVISOR) {
+    const chartCursor = chartCursorPosition();
+    if (showCursor && chartCursor && chartCursor.x >= 0 && chartCursor.x <= width - shift
+      && chartCursor.y > chartHeaderHeight()) {
+      const cursorX = chartCursor.x + shift;
       fill(255);
       stroke(255, STROKE_ALPHA_LOW);
-      line(mouseX + shift, height - height / TIMELINE_HEIGHT_DIVISOR_SMALL, mouseX + shift, height); // Vertical line to timeline
-      line(mouseX + shift, mouseY, mouseX + shift, height - height / 9); // Vertical line to data
+      line(cursorX, height - chartTickHeight(), cursorX, height); // Vertical line to timeline
+      line(cursorX, chartCursor.touch ? chartHeaderHeight() : chartCursor.y, cursorX, height - height / 9);
       noStroke();
-      textSize(Math.max(11, height / TEXT_SIZE_DIVISOR_SMALL));
+      textSize(chartTextSize(TEXT_SIZE_DIVISOR_SMALL));
       textAlign(CENTER, BASELINE);
-      const label = cursorTimeLabel(yearFromPlotX(mouseX + shift));
+      const label = cursorTimeLabel(yearFromPlotX(cursorX));
       const halfLabelWidth = textWidth(label) / 2;
-      const labelX = constrain(mouseX + shift, shift + halfLabelWidth + 4, width - halfLabelWidth - 4);
+      const labelX = constrain(cursorX, shift + halfLabelWidth + 4, width - halfLabelWidth - 4);
       text(label, labelX, height - height / GUI_HEIGHT_DIVISOR);
     }
 
@@ -203,7 +209,7 @@ function draw() {
     fill(255);
     stroke(0);
     textAlign(CENTER, BASELINE);
-    textSize(Math.max(11, Math.min(14, height / TEXT_SIZE_DIVISOR_SMALL)));
+    textSize(Math.max(12, Math.min(14, height / TEXT_SIZE_DIVISOR_SMALL)));
     let lastLabelLeft = Infinity;
     const universeStartYear = currentYear - 13800000000;
     const ticks = timelineTicks(Math.max(universeStartYear, yearFromPlotX(shift)), currentYear, Math.abs(oneYear));
@@ -219,7 +225,7 @@ function draw() {
 
       }
       stroke(255);
-      line(x, height - height / TIMELINE_HEIGHT_DIVISOR_SMALL, x, height);
+      line(x, height - chartTickHeight(), x, height);
     }
 
     // Draw universe age boundary line

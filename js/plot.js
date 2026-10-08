@@ -17,7 +17,7 @@ function wrapTooltipText(value, availableWidth) {
 }
 
 function panelTargetY(position) {
-  return height / GUI_HEIGHT_DIVISOR + (position === 0 ? height / DATA_PANEL_HEIGHT_DIVISOR : 0);
+  return chartHeaderHeight() + (position === 0 ? chartPanelHeight() : 0);
 }
 
 class Data {
@@ -69,7 +69,7 @@ class Data {
 
     // Set initial panel positions
     if (this.position === 0) this.rectY = height;      // Baseline panel at bottom
-    if (this.position === 1) this.rectY = -height / 3; // Overlay panel at top
+    if (this.position === 1) this.rectY = -chartPanelHeight(); // Overlay panel at top
 
     if (samples.length === 0) return;
     this.maxX = this.dataX[0];
@@ -112,7 +112,7 @@ class Data {
       return;
     }
     colorMode(RGB);
-    this.defRectY = height / GUI_HEIGHT_DIVISOR;
+    this.defRectY = chartHeaderHeight();
     this.rectX = width - oneYear * (this.maxX - this.BP); // Panel X position (newest observation)
     this.rectW = oneYear * abs(this.distX);        // Panel width based on time range
 
@@ -146,20 +146,22 @@ class Data {
     if (abs(this.distY) < Data.MIN_Y_RANGE) this.distY = Data.MIN_Y_RANGE;
 
     if (this.position === 1) {
-      this.rectH = height / DATA_PANEL_HEIGHT_DIVISOR;
+      this.rectH = chartPanelHeight();
       const rectLeft = min(this.rectX, this.rectX + this.rectW);
       const rectRight = max(this.rectX, this.rectX + this.rectW);
       const rectTop = min(this.rectY, this.rectY + this.rectH);
       const rectBottom = max(this.rectY, this.rectY + this.rectH);
 
-      if (!dataGuideIsOpen() && mouseIsPressed && pmouseX >= rectLeft && pmouseX <= rectRight
-        && pmouseY >= rectTop && pmouseY <= rectBottom) {
-        this.rectY += (mouseY - pmouseY);
-      } else {
-        this.rectY = this.easeToTarget(this.rectY, this.defRectY);
+      if (chartTouchDraggedPanel() !== this) {
+        if (!chartTouchMode && !dataGuideIsOpen() && mouseIsPressed && pmouseX >= rectLeft && pmouseX <= rectRight
+          && pmouseY >= rectTop && pmouseY <= rectBottom) {
+          this.rectY += (mouseY - pmouseY);
+        } else {
+          this.rectY = this.easeToTarget(this.rectY, this.defRectY);
+        }
       }
     } else if (this.position === 0) {
-      this.rectH = height / DATA_PANEL_HEIGHT_DIVISOR;
+      this.rectH = chartPanelHeight();
       this.rectY = this.easeToTarget(this.rectY, this.rectH + this.defRectY);
     }
 
@@ -168,10 +170,10 @@ class Data {
       fill(0, 32, 64, BACKGROUND_ALPHA);
       rect(shift, this.rectY, width - shift, this.rectH);
       fill(this.c);
-      textSize(height / TEXT_SIZE_DIVISOR_MEDIUM);
+      textSize(chartTextSize(TEXT_SIZE_DIVISOR_MEDIUM, 16));
       textAlign(LEFT, TOP);
       text(this.displayName + ':', shift + 10, this.rectY + 5);
-      textSize(height / TEXT_SIZE_DIVISOR_SMALL);
+      textSize(chartTextSize(TEXT_SIZE_DIVISOR_SMALL));
       text('No samples in view. Zoom out.', shift + 10, this.rectY + 35);
       return;
     }
@@ -183,7 +185,7 @@ class Data {
     if (renderDistance < this.dataX.length) rect(this.rectX, this.rectY, -width, this.rectH);
     else rect(this.rectX, this.rectY, this.rectW, this.rectH);
 
-    textSize(height / TEXT_SIZE_DIVISOR_MEDIUM);
+    textSize(chartTextSize(TEXT_SIZE_DIVISOR_MEDIUM, 16));
     fill(this.c);
     textAlign(LEFT, TOP);
     text(this.displayName + ':', shift + 10, this.rectY + 5);
@@ -338,7 +340,8 @@ class Data {
     const labelRightLimit = width - 8;
     const occupiedLabels = [];
     const labels = [];
-    textSize(max(11, min(14, height / TEXT_SIZE_DIVISOR_SMALL)));
+    const fontSize = max(12, min(14, height / TEXT_SIZE_DIVISOR_SMALL));
+    textSize(fontSize);
     strokeWeight(1);
     for (let i = 1; i < renderDistance; i++) {
       const newer = this.seriesRows[i - 1];
@@ -366,8 +369,8 @@ class Data {
       if (labelLeft >= shift && occupiedLabels.every(([left, right]) => labelLeft > right + 8 || labelRight < left - 8)) {
         noStroke();
         fill(0, 32, 64, BACKGROUND_ALPHA_HIGH);
-        rect(labelLeft - 2, this.rectY + this.rectH - 7 - height / TEXT_SIZE_DIVISOR_TINY,
-          labelRight - labelLeft + 4, height / TEXT_SIZE_DIVISOR_TINY + 6);
+        rect(labelLeft - 2, this.rectY + this.rectH - fontSize - 7,
+          labelRight - labelLeft + 4, fontSize + 6);
         fill(220);
         text(label, labelRight, this.rectY + this.rectH - 4);
         occupiedLabels.push([labelLeft, labelRight]);
@@ -394,8 +397,10 @@ class Data {
   }
 
   drawDataTooltip(y, h, renderDistance) {
-    if (!showCursor || mouseY <= height / GUI_HEIGHT_DIVISOR || mouseY >= height - height / TIMELINE_HEIGHT_DIVISOR) return;
-    const timeAtMouse = this.BP + (width - mouseX - shift) / oneYear;
+    const cursor = chartCursorPosition();
+    if (!showCursor || !cursor || cursor.x < 0 || cursor.x > width - shift
+      || cursor.y <= chartHeaderHeight() || cursor.y >= height - height / TIMELINE_HEIGHT_DIVISOR) return;
+    const timeAtMouse = this.BP + (width - cursor.x - shift) / oneYear;
     let index = this.nearestVisibleIndex(timeAtMouse, renderDistance);
     if (index < 0) return;
     // Several proxy estimates can share an age. Let the cursor choose between
@@ -403,10 +408,10 @@ class Data {
     let firstAtAge = index;
     while (firstAtAge > 0 && this.dataX[firstAtAge - 1] === this.dataX[index]) firstAtAge--;
     for (let i = firstAtAge; i < renderDistance && this.dataX[i] === this.dataX[index]; i++) {
-      if (abs(mouseY - (y + this.dataY[i] * h)) < abs(mouseY - (y + this.dataY[index] * h))) index = i;
+      if (abs(cursor.y - (y + this.dataY[i] * h)) < abs(cursor.y - (y + this.dataY[index] * h))) index = i;
     }
     const pointY = y + this.dataY[index] * h;
-    textSize(max(11, min(14, height / TEXT_SIZE_DIVISOR_SMALL)));
+    textSize(max(cursor.touch ? 14 : 12, min(14, height / TEXT_SIZE_DIVISOR_SMALL)));
     const valueText = this.formatTooltipValue(this.dataY[index]);
     const mouseData = this.unit ? valueText + ' ' + this.unit : valueText;
     const sourceLabel = sourceLabelForDataPoint(this.seriesRows?.[index]);
@@ -428,13 +433,15 @@ class Data {
       sample?.source?.startsWith('solar-') ? sample.note : ''].filter(Boolean)
       .flatMap(value => wrapTooltipText(value, min(320, width - 32)));
     const tooltipWidth = max(...lines.map(value => textWidth(value))) + 12;
-    const lineHeight = max(16, height / TIMELINE_HEIGHT_DIVISOR_SMALL);
+    const lineHeight = max(cursor.touch ? 18 : 16, height / TIMELINE_HEIGHT_DIVISOR_SMALL);
     const tooltipHeight = lines.length * lineHeight + 8;
-    const tooltipX = constrain(mouseX + shift, 8, width - tooltipWidth - 8);
-    const tooltipY = constrain(pointY - tooltipHeight - 8, height / GUI_HEIGHT_DIVISOR + 4,
+    const tooltipX = cursor.touch ? (cursor.x < width / 2 ? width - tooltipWidth - 8 : shift + 8)
+      : constrain(cursor.x + shift, shift + 8, width - tooltipWidth - 8);
+    const tooltipY = constrain(cursor.touch ? this.rectY + chartTextSize(TEXT_SIZE_DIVISOR_MEDIUM, 16) + 12
+      : pointY - tooltipHeight - 8, chartHeaderHeight() + 4,
       height - height / TIMELINE_HEIGHT_DIVISOR - tooltipHeight - 4);
     stroke(this.c);
-    line(mouseX + shift, mouseY, mouseX + shift, pointY);
+    if (!cursor.touch) line(cursor.x + shift, cursor.y, cursor.x + shift, pointY);
     noStroke();
     rectMode(CORNER);
     fill(0, 32, 64, BACKGROUND_ALPHA_HIGH);
