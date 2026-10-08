@@ -98,22 +98,18 @@ function moveChartTouch(input) {
 function endChartTouch(input, cancelled = false) {
   const pointer = chartTouchPointers.get(input.pointerId);
   if (!pointer) return;
-  let tappedButton = null;
   if (!cancelled) moveChartTouch(input);
   if (cancelled) chartTouchClickSuppressed = true;
-  else if (chartTouchPointers.size === 1 && !chartTouchGesture.moved && !chartTouchGesture.pinched) {
-    if (pointer.target.matches('canvas')) {
-      const point = chartTouchPoint(input);
-      chartTouchCursor = { year: yearFromPlotX(point.x + shift), y: point.y };
-      showCursor = true;
-    } else tappedButton = pointer.target;
+  else if (chartTouchPointers.size === 1 && !chartTouchGesture.moved && !chartTouchGesture.pinched
+    && pointer.target.matches('canvas')) {
+    const point = chartTouchPoint(input);
+    chartTouchCursor = { year: yearFromPlotX(point.x + shift), y: point.y };
+    showCursor = true;
   }
   chartTouchPointers.delete(input.pointerId);
   if (chartTouchPointers.size >= 2) chartTouchGesture.distance = chartPinchDistance();
   if (!chartTouchPointers.size) chartTouchGesture = null;
   redrawRequested = true;
-  // Cancelling native touch behavior suppresses the browser's compatibility click.
-  if (tappedButton) tappedButton.click();
 }
 
 function resetChartTouch() {
@@ -139,30 +135,6 @@ function initializeChartTouch() {
   viewport.addEventListener('contextmenu', input => input.preventDefault());
   window.addEventListener('blur', resetChartTouch);
   new ResizeObserver(resizeChartViewport).observe(viewport);
-}
-
-function preventNativeChartTouch(input) {
-  const chartSurface = input.target.closest?.('canvas, #timeline-event-controls button');
-  if (input.cancelable && (chartSurface || input.touches.length > 1)) input.preventDefault();
-}
-
-function preventNativeChartGesture(input) {
-  if (input.cancelable && (chartTouchPointers.size || input.target.closest?.('#chart-viewport'))) input.preventDefault();
-}
-
-function initializeChartTouchGuards() {
-  if (typeof document === 'undefined' || !document.addEventListener) return;
-  const viewport = document.getElementById('chart-viewport');
-  if (!viewport) return;
-  // Capture sees touches even when a native button stops propagation. Explicitly
-  // non-passive listeners let Safari cancel selection and page zoom before takeover.
-  for (const name of ['touchstart', 'touchmove']) {
-    viewport.addEventListener(name, preventNativeChartTouch, { capture: true, passive: false });
-  }
-  for (const name of ['gesturestart', 'gesturechange', 'gestureend']) {
-    document.addEventListener(name, preventNativeChartGesture, { capture: true, passive: false });
-  }
-  document.addEventListener('selectstart', input => input.preventDefault(), { capture: true });
 }
 
 // Pointer events handle chart touches. Keep p5 from forwarding them to mouseDragged.

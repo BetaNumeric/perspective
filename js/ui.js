@@ -22,7 +22,6 @@ function updateComparisonControls() {
 }
 
 function initializeControls() {
-  initializeChartTouchGuards();
   const infoButton = document.getElementById('data-info-button');
   const guide = document.getElementById('about-data');
   const buttons = [...document.querySelectorAll('[data-comparison]')];
